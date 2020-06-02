@@ -23,11 +23,11 @@ paths_list = [path_train, path_test]
 word_dict, pos_dict = get_vocabs(paths_list)
 
 # Prep Train Data
-train = DepDataset(word_dict, pos_dict, path_train, word_embedding_dim=WORD_EMBEDDING_DIM, padding=False)
+train = DepDataset(word_dict, pos_dict, path_train, word_embedding_dim=WORD_EMBEDDING_DIM, padding=False) # TODO padding not in use
 train_dataloader = DataLoader(train, shuffle=True)
 
 # Prep Test Data
-test = DepDataset(word_dict, pos_dict, path_test, word_embedding_dim=WORD_EMBEDDING_DIM, padding=False)
+test = DepDataset(word_dict, pos_dict, path_test, word_embedding_dim=WORD_EMBEDDING_DIM, padding=False) # TODO padding not in use
 test_dataloader = DataLoader(test, shuffle=False)
 
 # Dependency Parser Model
@@ -88,7 +88,7 @@ for epoch in range(1, EPOCHS+1):
     total_acc = total_acc / total_len
     loss_list.append(float(total_loss))
     accuracy_list.append(float(total_acc))
-    test_acc = evaluate(model, test_dataloader) # uses chu-liu
+    test_acc = evaluate(model, test_dataloader)  # uses chu-liu
     e_interval = i
     print(f"Epoch {epoch} Completed,\tLoss {np.mean(loss_list[-e_interval:])}\t"
           f"Accuracy: {np.mean(accuracy_list[-e_interval:])}\t Test Accuracy: {test_acc}")

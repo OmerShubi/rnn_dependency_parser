@@ -25,11 +25,11 @@ class KiperwasserDependencyParser(nn.Module):
             self.lstm_out_dim = self.emb_dim
 
         self.encoder = nn.LSTM(input_size=self.emb_dim, hidden_size=self.lstm_out_dim, num_layers=2, bidirectional=True,
-                               batch_first=True)
+                               batch_first=True) # TODO dimensions!!! and batch_first
 
-        self.edge_scorer = MLP(self.lstm_out_dim, 100)
-        self.decoder = decode_mst  # This is used to produce the maximum spannning tree during inference
-        self.loss_function = nll_loss
+        self.edge_scorer = MLP(self.lstm_out_dim, 100) # TODO read MLP
+        self.decoder = decode_mst  # TODO read chewy This is used to produce the maximum spannning tree during inference
+        self.loss_function = nll_loss  #TODO can use built in nllloss? todo read nll_loss
         self.log_soft_max = nn.LogSoftmax(dim=0)
 
     def forward(self, sentence):
@@ -50,12 +50,14 @@ class KiperwasserDependencyParser(nn.Module):
         scores = self.edge_scorer(lstm_output)
         probs_logged = self.log_soft_max(scores)
         seq_len = lstm_output.size(1)
-        # Calculate the negative log likelihood loss described above
 
+        # Calculate the negative log likelihood loss described above
         loss = self.loss_function(probs_logged, true_tree_heads, self.device)
+
         # Use Chu-Liu-Edmonds to get the predicted parse tree T' given the calculated score matrix
         predicted_tree, _ = decode_mst(scores.data.cpu().numpy(), seq_len, False)
         predicted_tree = torch.from_numpy(predicted_tree)
+
         return loss, predicted_tree
 
     def infer(self, sentence):
