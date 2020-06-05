@@ -3,13 +3,12 @@ from collections import Counter, defaultdict
 from torchtext.vocab import Vocab
 import torch
 
-ROOT_WORD = "<root>"
-ROOT_TAG = "<root>"
-UNKNOWN_TOKEN = "<unk>"
-UNKNOWN_TAG = "<unk>"
-
+ROOT_WORD = ROOT_TAG = "<root>"
+UNKNOWN_TOKEN = UNKNOWN_TAG = "<unk>"
 SPECIAL_TOKENS = [ROOT_WORD, UNKNOWN_TOKEN]
 PRETRAINED_VECTOR_EMBEDDING = "glove.6B.100d"
+
+# TODO delete
 def split(string, delimiters):
     """
         Split strings according to delimiters
@@ -27,7 +26,7 @@ def split(string, delimiters):
             for j, _substring in enumerate(substack):
                 stack.insert(i + j, _substring)
 
-    return stack
+    return stack # T
 
 # TODO min and max thresholds for word occurences
 def get_vocabs(list_of_paths):
@@ -55,7 +54,6 @@ def get_vocabs(list_of_paths):
 
     return word_dict, pos_dict
 
-
 class DepDataReader:
     def __init__(self, file, word_dict, pos_dict,word_idx_mappings,pos_idx_mappings,comp=False):
         self.file = file
@@ -79,8 +77,10 @@ class DepDataReader:
             sen_words = [self.word_idx_mappings.get(ROOT_WORD)]
             sen_poses = [self.pos_idx_mappings.get(ROOT_TAG)]
             sen_heads = [-1]
+
             for line in f:
                 splited_words = line.split()
+
                 # empty row --> dump the previous sentence and start again
                 if not splited_words:
                     self.sentences.append((torch.tensor(sen_words, dtype=torch.long, requires_grad=False),
@@ -90,14 +90,12 @@ class DepDataReader:
                     sen_words = [self.word_idx_mappings.get(ROOT_WORD)]
                     sen_poses = [self.pos_idx_mappings.get(ROOT_TAG)]
                     sen_heads = [-1]
+
                 # part of sentence
                 else:
                     curr_word = splited_words[1]
                     curr_pos = splited_words[3]
-                    if self.comp:
-                        curr_head = -1
-                    else:
-                        curr_head = int(splited_words[6])
+                    curr_head = -1 if self.comp else int(splited_words[6])
 
                     if curr_word in word_dict_keys:
                         curr_word_idx = self.word_idx_mappings.get(curr_word)
@@ -113,16 +111,18 @@ class DepDataReader:
                     sen_poses.append(curr_pos_idx)
                     sen_heads.append(curr_head)
 
+    # todo delete - no use
     def get_num_sentences(self):
         """returns num of sentences in data"""
         return len(self.sentences)
 
 
 class DepDataset(Dataset):
+    # TODO padding use?
     def __init__(self, word_dict, pos_dict, file_path: str, word_embedding_dim=-1, padding=False, comp=False):
         super().__init__()
         self.file = file_path
-        self.vocab_size = len(word_dict)  # number of words in vocabulary
+        self.word_vocab_size = len(word_dict)  # number of words in vocabulary
         self.word_idx_mappings, self.idx_word_mappings, self.word_vectors = self.init_word_embeddings(
             word_dict, word_embedding_dim)
         self.pos_idx_mappings, self.idx_pos_mappings = self.init_pos_vocab(pos_dict)
@@ -130,17 +130,15 @@ class DepDataset(Dataset):
         self.unknown_idx = self.word_idx_mappings.get(UNKNOWN_TOKEN)  # todo always 1?
         self.unknown_pos_idx = self.pos_idx_mappings.get(UNKNOWN_TAG)  # todo always 1?
         self.root_idx = self.word_idx_mappings.get(ROOT_WORD)  # todo always 0?
-        # TODO one line if
-        if self.word_vectors is None:
-            self.word_vector_dim = word_embedding_dim
-        else:
-            self.word_vector_dim = self.word_vectors.size(-1)
-        self.sentence_lens = [len(sentence[0]) for sentence in self.datareader.sentences]
-        self.max_seq_len = max(self.sentence_lens)
+        self.word_vector_dim = word_embedding_dim if self.word_vectors is None else self.word_vectors.size(-1)
         self.sentences_dataset = self.datareader.sentences
+        # TODO delete if no padding
+        self.max_seq_len = max([len(sentence[0]) for sentence in self.datareader.sentences])
+        self.num_sentences = len(self.sentences_dataset)
 
     def __len__(self):
-        return len(self.sentences_dataset)  # todo self.number of sentences
+        """returns num of sentences in data"""
+        return self.num_sentences
 
     def __getitem__(self, index):
         word_embed_idx, pos_embed_idx, head_indexes_in_sentence = self.sentences_dataset[index]
@@ -154,11 +152,12 @@ class DepDataset(Dataset):
         else:
             glove = Vocab(Counter(word_dict), vectors=None, specials=SPECIAL_TOKENS)
         return glove.stoi, glove.itos, glove.vectors
-    # todo delete - no use
-    def get_word_embeddings(self):
-        return self.word_idx_mappings, self.idx_word_mappings, self.word_vectors
+
 
     def init_pos_vocab(self, pos_dict):
+        glove = Vocab(Counter(pos_dict), vectors=None, specials=SPECIAL_TOKENS)
+        pos_idx_mappings_tmp,  idx_pos_mappings_tmp = glove.stoi, glove.itos
+
         # TODO clean up sort
         # TODO not working with comp
         idx_pos_mappings = sorted([self.word_idx_mappings.get(token) for token in SPECIAL_TOKENS]) # will not work with comp [0,1]
@@ -170,6 +169,11 @@ class DepDataset(Dataset):
             idx_pos_mappings.append(str(pos))
 
         return pos_idx_mappings, idx_pos_mappings
+
+
+    # todo delete - no use
+    def get_word_embeddings(self):
+        return self.word_idx_mappings, self.idx_word_mappings, self.word_vectors
 
     # todo delete - no use
     def get_pos_vocab(self):

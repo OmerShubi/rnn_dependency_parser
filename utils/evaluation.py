@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 matplotlib.use('Agg')
 
 def evaluate(model, dataloader):
+    # TODO generate comp loss
     acc = 0
     total_len = 0
     total_acc = 0
@@ -14,21 +15,19 @@ def evaluate(model, dataloader):
     with torch.no_grad():
         for batch_idx, input_data in enumerate(tqdm.tqdm(dataloader)):
             loss, predicted_tree = model(tuple(input_data))
-            acc = acc_one_sen(predicted_tree, input_data[2])
             curr_len = input_data[2][0].size(0)
-            total_acc += curr_len * acc
+            total_acc += num_of_correct_one_sen(predicted_tree, input_data[2])
             total_loss += curr_len * loss
             total_len += curr_len
         total_acc = total_acc / total_len
-        total_loss = total_loss/ total_len
+        total_loss = total_loss / total_len
     return total_acc, total_loss
 
-
-def acc_one_sen(pred_heads, true_heads):
-    pred_heads = pred_heads[1:]
-    true_heads = true_heads[0]
-    true_heads = true_heads[1:]
-    return float((pred_heads.eq(true_heads)).sum())/pred_heads.size(0)
+# TODO generate comp tag- change grom acc to total num calc
+def num_of_correct_one_sen(pred_heads, true_heads):
+    pred_heads = pred_heads[1:] # remove root head (-1)
+    true_heads = true_heads[0][1:] # remove root head (-1)
+    return float((pred_heads.eq(true_heads)).sum())
 
 
 def run_all_models(models_dir,test_dataloader):

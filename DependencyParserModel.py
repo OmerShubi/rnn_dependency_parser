@@ -1,6 +1,6 @@
 from chu_liu_edmonds import decode_mst
 import torch.nn as nn
-from utils.getVocabulary import *
+from utils.DataPreprocessing import *
 from MLP import *
 
 
@@ -15,27 +15,27 @@ class KiperwasserDependencyParser(nn.Module):
         else:
             self.word_embedder = nn.Embedding(word_vocab_size, word_embedding_dim)
 
+        # TODO pre trainde embedding pos
         self.pos_embedder = nn.Embedding(tag_vocab_size, tag_embedding_dim)
 
         self.emb_dim = self.word_embedder.embedding_dim + self.pos_embedder.embedding_dim
 
-        if lstm_out_dim:
-            self.lstm_out_dim = lstm_out_dim
-        else:
-            self.lstm_out_dim = self.emb_dim
+        self.lstm_out_dim = lstm_out_dim if lstm_out_dim else self.emb_dim
 
         self.encoder = nn.LSTM(input_size=self.emb_dim, hidden_size=self.lstm_out_dim, num_layers=2, bidirectional=True,
                                batch_first=True) # TODO dimensions!!! and batch_first
 
-        self.edge_scorer = MLP(self.lstm_out_dim, 100) # TODO read MLP
-        self.decoder = decode_mst  # TODO read chewy This is used to produce the maximum spannning tree during inference
-        self.loss_function = nll_loss  #TODO can use built in nllloss? todo read nll_loss
+        self.edge_scorer = MLP(self.lstm_out_dim, 100)
+        self.decoder = decode_mst  # This is used to produce the maximum spannning tree during inference
+
+        self.loss_function = nll_loss
         self.log_soft_max = nn.LogSoftmax(dim=0)
 
     def forward(self, sentence):
         word_idx_tensor, pos_idx_tensor, true_tree_heads = sentence
 
         true_tree_heads = true_tree_heads.squeeze(0)
+
         # Pass word_idx and pos_idx through their embedding layers
         pos_embbedings = self.pos_embedder(pos_idx_tensor.to(self.device))
         word_embbedings = self.word_embedder(word_idx_tensor.to(self.device))
@@ -55,10 +55,11 @@ class KiperwasserDependencyParser(nn.Module):
         loss = self.loss_function(probs_logged, true_tree_heads, self.device)
 
         # Use Chu-Liu-Edmonds to get the predicted parse tree T' given the calculated score matrix
-        predicted_tree, _ = decode_mst(scores.data.cpu().numpy(), seq_len, False)
+        predicted_tree, _ = self.decoder(scores.data.cpu().numpy(), seq_len, False)
         predicted_tree = torch.from_numpy(predicted_tree)
 
         return loss, predicted_tree
+
 # todo read infer
     def infer(self, sentence):
         with torch.no_grad():
@@ -86,8 +87,8 @@ class KiperwasserDependencyParser(nn.Module):
 
 def nll_loss(scores, tree, device):
     loss = torch.tensor(0, dtype=torch.float).to(device)
+    tree_length = tree.size(0)
     for m, h in enumerate(tree):
-        tree_length = tree.size(0)
         loss += -scores[h, m] / tree_length
     return loss
 
