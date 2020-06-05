@@ -20,6 +20,8 @@ path_train = data_dir + "train.labeled"
 path_test = data_dir + "test.labeled"
 paths_list = [path_train, path_test]
 
+# Data Preprocessing #
+# Create Dictionaries of counts of words and tags
 word_dict, pos_dict = get_vocabs(paths_list)
 
 # Prep Train Data

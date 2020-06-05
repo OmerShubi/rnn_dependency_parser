@@ -59,7 +59,7 @@ class KiperwasserDependencyParser(nn.Module):
         predicted_tree = torch.from_numpy(predicted_tree)
 
         return loss, predicted_tree
-
+# todo read infer
     def infer(self, sentence):
         with torch.no_grad():
             word_idx_tensor, pos_idx_tensor, _ = sentence

@@ -161,7 +161,7 @@ class DepDataset(Dataset):
     def init_pos_vocab(self, pos_dict):
         # TODO clean up sort
         # TODO not working with comp
-        idx_pos_mappings = sorted([self.word_idx_mappings.get(token) for token in SPECIAL_TOKENS]) # will not work with comp
+        idx_pos_mappings = sorted([self.word_idx_mappings.get(token) for token in SPECIAL_TOKENS]) # will not work with comp [0,1]
 
         pos_idx_mappings = {self.idx_word_mappings[idx]: idx for idx in idx_pos_mappings}
 
