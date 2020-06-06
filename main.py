@@ -11,16 +11,19 @@ from utils.DataPreprocessing import *
 # Hyper Params
 WORD_EMBEDDING_DIM = 100
 TAG_EMBEDDING_DIM = 25
-EPOCHS = 20
+EPOCHS = 5
 LEARNING_RATE = 0.01
+ACUMULATE_GRAD_STEPS = 3 # This is the actual batch_size, while we officially use batch_size=1
 
 
 def main():
 
     # Data paths
     data_dir = "Data/"
-    path_train = data_dir + "train.labeled"
-    path_test = data_dir + "test.labeled"
+    # path_train = data_dir + "train.labeled"
+    path_train = data_dir + "small.labeled"
+    # path_test = data_dir + "test.labeled"
+    path_test = data_dir + "small.labeled"
     paths_list = [path_train, path_test]
 
     # Data Preprocessing
@@ -56,7 +59,6 @@ def main():
         model.cuda()
 
     optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
-    acumulate_grad_steps = 5  # This is the actual batch_size, while we officially use batch_size=1
 
     # Training
     print("Training Started")
@@ -71,10 +73,10 @@ def main():
             i += 1
 
             loss, dep_tree = model(tuple(input_data))
-            loss = loss / acumulate_grad_steps
+            loss = loss / ACUMULATE_GRAD_STEPS
             loss.backward()
 
-            if i % acumulate_grad_steps == 0:
+            if i % ACUMULATE_GRAD_STEPS == 0:
                 optimizer.step() # updates params
                 model.zero_grad()
                 print(f"Epoch {epoch} milestone,\tLoss {total_loss / (i + 1)}\tAccuracy: {total_acc / total_len}")
@@ -92,11 +94,10 @@ def main():
         accuracy_list.append(float(total_acc))
 
         # Evaluate on test
-        # TODO test_acc tuple?
-        test_acc = evaluate(model, test_dataloader)  # uses chu-liu
-        e_interval = i
-        print(f"Epoch {epoch} Completed,\tLoss {np.mean(loss_list[-e_interval:])}\t"
-              f"Accuracy: {np.mean(accuracy_list[-e_interval:])}\t Test Accuracy: {test_acc}")
+        test_acc, _ = evaluate(model, test_dataloader)  # uses chu-liu
+
+        print(f"Epoch {epoch} Completed,\tCurr Loss {total_loss}\t"
+              f"Curr Train Accuracy: {total_acc}\t Curr Test Accuracy: {test_acc}\n")
 
         # Plot Accuracy
         plt.figure()
@@ -104,7 +105,7 @@ def main():
         plt.xlabel("Epochs")
         plt.ylabel("Value")
         plt.legend()
-        plt.savefig('../Graphs/Acc.png')
+        plt.savefig('Graphs/Acc.png')
 
         # Plot Loss
         plt.figure()
@@ -112,10 +113,10 @@ def main():
         plt.xlabel("Epochs")
         plt.ylabel("Value")
         plt.legend()
-        plt.savefig('../Graphs/Loss.png')
+        plt.savefig('Graphs/Loss.png')
 
         # Save model
-        torch.save(model, "../models/model{}.pth".format(epoch))
+        torch.save(model, "models/model{}.pth".format(epoch))
 
 
 if __name__ == "__main__":
