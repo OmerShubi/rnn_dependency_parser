@@ -34,7 +34,6 @@ def main():
     train = DepDataset(word_dict,
                        tag_dict,
                        path_train,
-                       word_embedding_dim=WORD_EMBEDDING_DIM,
                        padding=False) # TODO padding not in use
     train_dataloader = DataLoader(train, shuffle=True)
 
@@ -42,14 +41,11 @@ def main():
     test = DepDataset(word_dict,
                       tag_dict,
                       path_test,
-                      word_embedding_dim=WORD_EMBEDDING_DIM,
                       padding=False) # TODO padding not in use
     test_dataloader = DataLoader(test, shuffle=False)
 
     # Dependency Parser Model
-    word_vocab_size = len(train.word_to_idx_dict.keys())
-    tag_vocab_size = len(train.tag_to_idx_dict.keys())
-    model = KiperwasserDependencyParser(word_vocab_size, tag_vocab_size)
+    model = KiperwasserDependencyParser(word_dict, tag_dict)
 
     # Determine if have GPU
     use_cuda = torch.cuda.is_available()
@@ -96,7 +92,7 @@ def main():
         create_graph(loss_train_list, loss_test_list, "Loss")
 
         # Save model
-        torch.save(model, "models/model{}.pth".format(epoch))
+        torch.save(model, f"models/model_epoch{epoch}.pth")
 
 
 if __name__ == "__main__":

@@ -8,17 +8,20 @@ from contextlib import nullcontext
 
 class KiperwasserDependencyParser(nn.Module):
     # TODO lstm_out_dim use
-    def __init__(self, word_vocab_size, tag_vocab_size, tag_embedding_dim=25, word_embedding_dim=100,
+    def __init__(self, word_dict, tag_dict, tag_embedding_dim=25, word_embedding_dim=100,
                  lstm_out_dim=None, word_embeddings=None, hidden_dim=None, hidden_dim_mlp=100):
         super(KiperwasserDependencyParser, self).__init__()
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
+        self.word_dict = word_dict
+        self.tag_dict = tag_dict
+
         if word_embeddings:
             self.word_embedder = nn.Embedding.from_pretrained(word_embeddings, freeze=False)
         else:
-            self.word_embedder = nn.Embedding(word_vocab_size, word_embedding_dim)
+            self.word_embedder = nn.Embedding(len(self.word_dict), word_embedding_dim)
 
-        self.tag_embedder = nn.Embedding(tag_vocab_size, tag_embedding_dim)
+        self.tag_embedder = nn.Embedding(len(self.tag_dict), tag_embedding_dim)
 
         self.emb_dim = self.word_embedder.embedding_dim + self.tag_embedder.embedding_dim
 
@@ -64,17 +67,17 @@ class KiperwasserDependencyParser(nn.Module):
 
             # Use Chu-Liu-Edmonds to get the predicted parse tree T' given the calculated score matrix
             seq_len = lstm_output.size(1)
-            predicted_tree, _ = self.decoder(scores.data.cpu().numpy(), seq_len, False)
+            predicted_tree_heads, _ = self.decoder(scores.data.cpu().numpy(), seq_len, False)
 
             if not is_comp:
                 true_tree_heads = true_tree_heads.squeeze(0)
                 # Calculate the negative log likelihood loss described above
                 probs_logged = self.log_soft_max(scores)
                 loss = KiperwasserDependencyParser.nll_loss(probs_logged, true_tree_heads, self.device)
-                return loss, torch.from_numpy(predicted_tree)
+                return loss, torch.from_numpy(predicted_tree_heads)
 
             else:
-                return torch.from_numpy(predicted_tree)
+                return torch.from_numpy(predicted_tree_heads)
 
     @staticmethod
     def nll_loss(scores, tree, device):

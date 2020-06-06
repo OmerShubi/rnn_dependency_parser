@@ -95,17 +95,15 @@ class DepDataReader:
 class DepDataset(Dataset):
     # TODO padding use?
     # TODO comp use
-    def __init__(self, word_dict, tag_dict, file_path: str, word_embedding_dim =- 1, padding=False, comp=False):
+    def __init__(self, word_dict, tag_dict, file_path: str, pretrained_vector_embedding=False, padding=False, comp=False):
         super().__init__()
         self.file = file_path
         self.word_vocab_size = len(word_dict)  # number of words in vocabulary
-        self.word_to_idx_dict, self.words_list, self.word_vectors = DepDataset.init_word_embeddings(word_dict, word_embedding_dim)
+        self.word_to_idx_dict, self.words_list, self.word_vectors = DepDataset.init_word_embeddings(word_dict, pretrained_vector_embedding)
         self.tag_to_idx_dict, self.tags_list = DepDataset.init_tag_vocab(tag_dict)
         self.unknown_idx = self.word_to_idx_dict.get(UNKNOWN_TOKEN)
         self.unknown_tag_idx = self.tag_to_idx_dict.get(UNKNOWN_TAG)
         self.root_idx = self.word_to_idx_dict.get(ROOT_WORD)
-        # word_embedding_dim == -1 -> self.word_vector_dim is determind by the PRETRAINED_VECTOR_EMBEDDING name
-        self.word_vector_dim = word_embedding_dim if self.word_vectors is None else self.word_vectors.size(-1)
         datareader = DepDataReader(self.file, word_dict, tag_dict, self.word_to_idx_dict, self.tag_to_idx_dict, comp)
         self.sentences_dataset = datareader.sentences
         sentences_lens = [len(sentence[0])-1 for sentence in self.sentences_dataset]
@@ -122,12 +120,11 @@ class DepDataset(Dataset):
         return word_embed_idx, tag_embed_idx, head_indexes_in_sentence
 
     @staticmethod
-    def init_word_embeddings(word_dict, word_embedding_dim):
+    def init_word_embeddings(word_dict, pretrained_vector_embedding):
         # TODO add freq_min?
-        if word_embedding_dim <= 0:
+        if pretrained_vector_embedding:
             glove = Vocab(Counter(word_dict), vectors=PRETRAINED_VECTOR_EMBEDDING, specials=SPECIAL_TOKENS)
         else:
-            # advanced model
             glove = Vocab(Counter(word_dict), vectors=None, specials=SPECIAL_TOKENS)
         return glove.stoi, glove.itos, glove.vectors
 

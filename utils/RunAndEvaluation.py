@@ -17,7 +17,7 @@ def run_and_evaluate(model, dataloader, optimizer=None, acumelate_grad_steps=Non
     cm = torch.no_grad() if is_test else nullcontext()
     with cm:
         for batch_idx, input_data in enumerate(tqdm.tqdm(dataloader)):
-            loss, predicted_tree = model(tuple(input_data))
+            loss, predicted_tree_heads = model(tuple(input_data))
             if not is_test:
                 i += 1
                 loss = loss / acumelate_grad_steps
@@ -26,7 +26,7 @@ def run_and_evaluate(model, dataloader, optimizer=None, acumelate_grad_steps=Non
                     optimizer.step()  # updates params
                     model.zero_grad()
 
-            total_acc += num_of_correct_one_sen(predicted_tree, input_data[2]) # input_data[2] = true_heads
+            total_acc += num_of_correct_one_sen(predicted_tree_heads, input_data[2]) # input_data[2] = true_heads
             total_loss += loss.item()
 
         total_acc = total_acc / dataloader.dataset.num_edges
