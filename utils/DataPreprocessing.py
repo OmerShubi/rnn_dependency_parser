@@ -99,9 +99,8 @@ class DepDataset(Dataset):
         super().__init__()
         self.file = file_path
         self.word_vocab_size = len(word_dict)  # number of words in vocabulary
-        self.word_to_idx_dict, self.words_list, self.word_vectors = self.init_word_embeddings(
-            word_dict, word_embedding_dim)
-        self.tag_to_idx_dict, self.tags_list = self.init_tag_vocab(tag_dict)
+        self.word_to_idx_dict, self.words_list, self.word_vectors = DepDataset.init_word_embeddings(word_dict, word_embedding_dim)
+        self.tag_to_idx_dict, self.tags_list = DepDataset.init_tag_vocab(tag_dict)
         self.unknown_idx = self.word_to_idx_dict.get(UNKNOWN_TOKEN)
         self.unknown_tag_idx = self.tag_to_idx_dict.get(UNKNOWN_TAG)
         self.root_idx = self.word_to_idx_dict.get(ROOT_WORD)

@@ -49,8 +49,7 @@ def main():
     # Dependency Parser Model
     word_vocab_size = len(train.word_to_idx_dict.keys())
     tag_vocab_size = len(train.tag_to_idx_dict.keys())
-    model = KiperwasserDependencyParser(word_vocab_size,
-                                        tag_vocab_size)
+    model = KiperwasserDependencyParser(word_vocab_size, tag_vocab_size)
 
     # Determine if have GPU
     use_cuda = torch.cuda.is_available()

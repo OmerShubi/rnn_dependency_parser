@@ -2,6 +2,8 @@ from chu_liu_edmonds import decode_mst
 import torch.nn as nn
 from utils.DataPreprocessing import *
 from MLP import *
+from contextlib import nullcontext
+
 
 
 class KiperwasserDependencyParser(nn.Module):
@@ -38,36 +40,14 @@ class KiperwasserDependencyParser(nn.Module):
         self.log_soft_max = nn.LogSoftmax(dim=0)
 
     def forward(self, sentence):
-        word_idx_tensor, tag_idx_tensor, true_tree_heads = sentence
+        loss, predicted_tree = self.infer(sentence)
 
-        true_tree_heads = true_tree_heads.squeeze(0)
+        return loss, predicted_tree
 
-        # Pass word_idx and tag_idx through their embedding layers
-        tag_embbedings = self.tag_embedder(tag_idx_tensor.to(self.device))
-        word_embbedings = self.word_embedder(word_idx_tensor.to(self.device))
-
-        # Concat both embedding outputs
-        input_embeddings = torch.cat((word_embbedings, tag_embbedings), dim=2)
-
-        # Get Bi-LSTM hidden representation for each word+tag in sentence
-        lstm_output, _ = self.encoder(input_embeddings.view(1, input_embeddings.shape[1], -1))
-
-        # Get score for each possible edge in the parsing graph, construct score matrix
-        scores = self.edge_scorer(lstm_output)
-        probs_logged = self.log_soft_max(scores)
-        seq_len = lstm_output.size(1)
-
-        # Calculate the negative log likelihood loss described above
-        loss = self.nll_loss(probs_logged, true_tree_heads, self.device)
-
-        # Use Chu-Liu-Edmonds to get the predicted parse tree T' given the calculated score matrix
-        predicted_tree, _ = self.decoder(scores.data.cpu().numpy(), seq_len, False)
-
-        return loss, torch.from_numpy(predicted_tree)
-
-    def infer(self, sentence):
-        with torch.no_grad():
-            word_idx_tensor, tag_idx_tensor, _ = sentence
+    def infer(self, sentence, is_comp=False):
+        cm = torch.no_grad() if is_comp else nullcontext()
+        with cm:
+            word_idx_tensor, tag_idx_tensor, true_tree_heads = sentence
 
             # Pass word_idx and tag_idx through their embedding layers
             tag_embbedings = self.tag_embedder(tag_idx_tensor.to(self.device))
@@ -81,15 +61,23 @@ class KiperwasserDependencyParser(nn.Module):
 
             # Get score for each possible edge in the parsing graph, construct score matrix
             scores = self.edge_scorer(lstm_output)
-            seq_len = lstm_output.size(1)
 
             # Use Chu-Liu-Edmonds to get the predicted parse tree T' given the calculated score matrix
-            predicted_tree, _ = decode_mst(scores.data.cpu().numpy(), seq_len, False)
-            predicted_tree = torch.from_numpy(predicted_tree)
-        return predicted_tree
+            seq_len = lstm_output.size(1)
+            predicted_tree, _ = self.decoder(scores.data.cpu().numpy(), seq_len, False)
 
+            if not is_comp:
+                true_tree_heads = true_tree_heads.squeeze(0)
+                # Calculate the negative log likelihood loss described above
+                probs_logged = self.log_soft_max(scores)
+                loss = KiperwasserDependencyParser.nll_loss(probs_logged, true_tree_heads, self.device)
+                return loss, torch.from_numpy(predicted_tree)
 
-    def nll_loss(self, scores, tree, device):
+            else:
+                return torch.from_numpy(predicted_tree)
+
+    @staticmethod
+    def nll_loss(scores, tree, device):
         loss = torch.tensor(0, dtype=torch.float).to(device)
         tree_length = tree.size(0)
         for m, h in enumerate(tree):
