@@ -12,19 +12,22 @@ from utils.DataPreprocessing import *
 WORD_EMBEDDING_DIM = 100
 TAG_EMBEDDING_DIM = 25
 EPOCHS = 30
-LEARNING_RATE = 0.01 # TODO
-ACUMULATE_GRAD_STEPS = 5 # This is the actual batch_size, while we officially use batch_size=1
+LEARNING_RATE = 0.01  # TODO
+ACUMULATE_GRAD_STEPS = 5  # This is the actual batch_size, while we officially use batch_size=1
+DEBUG = False
+
 # uncomment for debugging
 # CUDA_LAUNCH_BLOCKING = 1 #
 
 def main():
-
     # Data paths
     data_dir = "Data/"
-    # path_train = data_dir + "train.labeled"
-    path_train = data_dir + "small_train.labeled"
-    # path_test = data_dir + "test.labeled"
-    path_test = data_dir + "small_test.labeled"
+    if DEBUG:
+        path_train = data_dir + "small_train.labeled"
+        path_test = data_dir + "small_test.labeled"
+    else:
+        path_train = data_dir + "train.labeled"
+        path_test = data_dir + "test.labeled"
 
     # Data Preprocessing
     # Create Dictionaries of counts of words and tags from train + test
@@ -34,14 +37,14 @@ def main():
     train = DepDataset(word_dict,
                        tag_dict,
                        path_train,
-                       padding=False) # TODO padding not in use
+                       padding=False)  # TODO padding not in use
     train_dataloader = DataLoader(train, shuffle=True)
 
     # Prep Test Data
     test = DepDataset(word_dict,
                       tag_dict,
                       path_test,
-                      padding=False) # TODO padding not in use
+                      padding=False)  # TODO padding not in use
     test_dataloader = DataLoader(test, shuffle=False)
 
     # Dependency Parser Model
@@ -63,7 +66,7 @@ def main():
     loss_train_list = []
     loss_test_list = []
     accuracy_test_list = []
-    for epoch in range(1, EPOCHS+1):
+    for epoch in range(1, EPOCHS + 1):
         # Forward + Backward on train
         train_acc, train_loss = run_and_evaluate(model,
                                                  train_dataloader,
@@ -97,4 +100,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
