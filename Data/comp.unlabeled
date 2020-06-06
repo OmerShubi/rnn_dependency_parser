@@ -24531,7 +24531,7 @@
 35	to	_	TO	_	_	_	_	_	_
 36	continue	_	VB	_	_	_	_	_	_
 37	to	_	TO	_	_	_	_	_	_
-38	evaluate	_	VB	_	_	_	_	_	_
+38	run_and_evaluate	_	VB	_	_	_	_	_	_
 39	an	_	DT	_	_	_	_	_	_
 40	acquisition	_	NN	_	_	_	_	_	_
 41	from	_	IN	_	_	_	_	_	_

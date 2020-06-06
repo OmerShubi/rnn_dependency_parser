@@ -132,8 +132,9 @@ class DepDataset(Dataset):
         self.root_idx = self.word_idx_mappings.get(ROOT_WORD)  # todo always 0?
         self.word_vector_dim = word_embedding_dim if self.word_vectors is None else self.word_vectors.size(-1)
         self.sentences_dataset = self.datareader.sentences
-        # TODO delete if no padding
-        self.max_seq_len = max([len(sentence[0]) for sentence in self.datareader.sentences])
+        sentences_lens = [len(sentence[0])-1 for sentence in self.sentences_dataset]
+        self.num_edges = sum(sentences_lens) # num of words
+        self.max_seq_len = max(sentences_lens) + 1 # TODO delete if no padding
         self.num_sentences = len(self.sentences_dataset)
 
     def __len__(self):

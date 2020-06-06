@@ -3,31 +3,51 @@ import tqdm
 import os
 import matplotlib
 import matplotlib.pyplot as plt
+from contextlib import nullcontext
 
 matplotlib.use('Agg')
 
-def evaluate(model, dataloader):
+
+def run_and_evaluate(model, dataloader, optimizer=None, acumelate_grad_steps=None, is_test = False):
     # TODO generate comp loss
-    acc = 0
-    total_len = 0
-    total_acc = 0
-    total_loss = 0
-    with torch.no_grad():
+    total_acc,  total_loss = 0, 0
+    i = 0
+    # torch.no_grad - temp covert all grad flags to False
+    cm = torch.no_grad() if is_test else nullcontext()
+    with cm:
         for batch_idx, input_data in enumerate(tqdm.tqdm(dataloader)):
             loss, predicted_tree = model(tuple(input_data))
-            curr_len = input_data[2][0].size(0)
-            total_acc += num_of_correct_one_sen(predicted_tree, input_data[2])
-            total_loss += curr_len * loss
-            total_len += curr_len
-        total_acc = total_acc / total_len
-        total_loss = total_loss / total_len
+            if not is_test:
+                i += 1
+                loss = loss / acumelate_grad_steps
+                loss.backward()
+                if i % acumelate_grad_steps == 0:
+                    optimizer.step()  # updates params
+                    model.zero_grad()
+
+            total_acc += num_of_correct_one_sen(predicted_tree, input_data[2]) # input_data[2] = true_heads
+            total_loss += loss.item()
+
+        total_acc = total_acc / dataloader.dataset.num_edges
+        total_loss = total_loss / len(dataloader)
     return total_acc, total_loss
 
-# TODO generate comp tag- change grom acc to total num calc
+# TODO generate comp tag - change from acc to total num calc
 def num_of_correct_one_sen(pred_heads, true_heads):
     pred_heads = pred_heads[1:] # remove root head (-1)
     true_heads = true_heads[0][1:] # remove root head (-1)
     return float((pred_heads.eq(true_heads)).sum())
+
+def create_graph(train_list, test_list, label):
+    color = "red" if label == "Accuracy" else "blue"
+    plt.figure()
+    plt.plot(train_list, c=color, label=label + '_train', fmt='-')
+    plt.plot(test_list, c=color, label=label + '_test',  fmt='--')
+    plt.xlabel("Epochs")
+    plt.ylabel("Value")
+    plt.legend()
+    plt.savefig(f'Graphs/{label}.png')
+
 
 
 def run_all_models(models_dir,test_dataloader):
@@ -38,7 +58,7 @@ def run_all_models(models_dir,test_dataloader):
         if filepath.endswith(".pth"):
             print("evaluating model saved in:{}".format(filepath))
             model=torch.load(filepath)
-            curr_acc, curr_loss = evaluate(model, test_dataloader)
+            curr_acc, curr_loss = run_and_evaluate(model, test_dataloader)
             acc_list.append(curr_acc)
             loss_list.append(curr_loss)
     return acc_list, loss_list
