@@ -4,15 +4,15 @@ import torch.optim as optim
 from torch.utils.data.dataloader import DataLoader
 from DependencyParserModel import *
 import tqdm
-from utils.evaluation import *
+from utils.RunAndEvaluation import *
 import matplotlib.pyplot as plt
 from utils.DataPreprocessing import *
 
 # Hyper Params
 WORD_EMBEDDING_DIM = 100
 TAG_EMBEDDING_DIM = 25
-EPOCHS = 2
-LEARNING_RATE = 0.01
+EPOCHS = 30
+LEARNING_RATE = 0.01 # TODO
 ACUMULATE_GRAD_STEPS = 5 # This is the actual batch_size, while we officially use batch_size=1
 # uncomment for debugging
 # CUDA_LAUNCH_BLOCKING = 1 #
@@ -50,10 +50,7 @@ def main():
     word_vocab_size = len(train.word_to_idx_dict.keys())
     tag_vocab_size = len(train.tag_to_idx_dict.keys())
     model = KiperwasserDependencyParser(word_vocab_size,
-                                        tag_vocab_size,
-                                        tag_embedding_dim=TAG_EMBEDDING_DIM,
-                                        word_embedding_dim=WORD_EMBEDDING_DIM,
-                                        word_embeddings=None)
+                                        tag_vocab_size)
 
     # Determine if have GPU
     use_cuda = torch.cuda.is_available()

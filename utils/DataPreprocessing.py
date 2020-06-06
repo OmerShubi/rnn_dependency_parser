@@ -135,7 +135,6 @@ class DepDataset(Dataset):
     @staticmethod
     def init_tag_vocab(tag_dict):
         # TODO add freq_min?
-        # TODO pretrainded?
         glove = Vocab(Counter(tag_dict), vectors=None, specials=SPECIAL_TOKENS)
 
         return glove.stoi, glove.itos
