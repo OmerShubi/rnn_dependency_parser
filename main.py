@@ -11,7 +11,7 @@ from utils.DataPreprocessing import *
 # Hyper Params
 WORD_EMBEDDING_DIM = 100
 TAG_EMBEDDING_DIM = 25
-EPOCHS = 5
+EPOCHS = 2
 LEARNING_RATE = 0.01
 ACUMULATE_GRAD_STEPS = 5 # This is the actual batch_size, while we officially use batch_size=1
 # uncomment for debugging
@@ -22,18 +22,17 @@ def main():
     # Data paths
     data_dir = "Data/"
     # path_train = data_dir + "train.labeled"
-    path_train = data_dir + "small.labeled"
+    path_train = data_dir + "small_train.labeled"
     # path_test = data_dir + "test.labeled"
-    path_test = data_dir + "small.labeled"
-    paths_list = [path_train, path_test]
+    path_test = data_dir + "small_test.labeled"
 
     # Data Preprocessing
     # Create Dictionaries of counts of words and tags from train + test
-    word_dict, pos_dict = get_vocabs(paths_list)
+    word_dict, tag_dict = get_vocabs([path_train, path_test])
 
     # Prep Train Data
     train = DepDataset(word_dict,
-                       pos_dict,
+                       tag_dict,
                        path_train,
                        word_embedding_dim=WORD_EMBEDDING_DIM,
                        padding=False) # TODO padding not in use
@@ -41,17 +40,17 @@ def main():
 
     # Prep Test Data
     test = DepDataset(word_dict,
-                      pos_dict,
+                      tag_dict,
                       path_test,
                       word_embedding_dim=WORD_EMBEDDING_DIM,
                       padding=False) # TODO padding not in use
     test_dataloader = DataLoader(test, shuffle=False)
 
     # Dependency Parser Model
-    word_vocab_size = len(train.word_idx_mappings.keys())
-    pos_vocab_size = len(train.pos_idx_mappings.keys())
+    word_vocab_size = len(train.word_to_idx_dict.keys())
+    tag_vocab_size = len(train.tag_to_idx_dict.keys())
     model = KiperwasserDependencyParser(word_vocab_size,
-                                        pos_vocab_size,
+                                        tag_vocab_size,
                                         tag_embedding_dim=TAG_EMBEDDING_DIM,
                                         word_embedding_dim=WORD_EMBEDDING_DIM,
                                         word_embeddings=None)
@@ -75,7 +74,7 @@ def main():
     for epoch in range(1, EPOCHS+1):
         # Forward + Backward on train
         train_acc, train_loss = run_and_evaluate(model,
-                                                 test_dataloader,
+                                                 train_dataloader,
                                                  optimizer=optimizer,
                                                  acumelate_grad_steps=ACUMULATE_GRAD_STEPS)
 

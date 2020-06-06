@@ -15,10 +15,10 @@ class KiperwasserDependencyParser(nn.Module):
         else:
             self.word_embedder = nn.Embedding(word_vocab_size, word_embedding_dim)
 
-        # TODO pre trainde embedding pos
-        self.pos_embedder = nn.Embedding(tag_vocab_size, tag_embedding_dim)
+        # TODO pre trainde embedding tag
+        self.tag_embedder = nn.Embedding(tag_vocab_size, tag_embedding_dim)
 
-        self.emb_dim = self.word_embedder.embedding_dim + self.pos_embedder.embedding_dim
+        self.emb_dim = self.word_embedder.embedding_dim + self.tag_embedder.embedding_dim
 
         self.lstm_out_dim = lstm_out_dim if lstm_out_dim else self.emb_dim
 
@@ -32,21 +32,21 @@ class KiperwasserDependencyParser(nn.Module):
         self.log_soft_max = nn.LogSoftmax(dim=0)
 
     def forward(self, sentence):
-        word_idx_tensor, pos_idx_tensor, true_tree_heads = sentence
+        word_idx_tensor, tag_idx_tensor, true_tree_heads = sentence
 
         true_tree_heads = true_tree_heads.squeeze(0)
 
-        # Pass word_idx and pos_idx through their embedding layers
-        pos_embbedings = self.pos_embedder(pos_idx_tensor.to(self.device))
+        # Pass word_idx and tag_idx through their embedding layers
+        tag_embbedings = self.tag_embedder(tag_idx_tensor.to(self.device))
         word_embbedings = self.word_embedder(word_idx_tensor.to(self.device))
 
         # Concat both embedding outputs
-        input_embeddings = torch.cat((word_embbedings, pos_embbedings), dim=2)
+        input_embeddings = torch.cat((word_embbedings, tag_embbedings), dim=2)
 
-        # Get Bi-LSTM hidden representation for each word+pos in sentence
+        # Get Bi-LSTM hidden representation for each word+tag in sentence
         lstm_output, _ = self.encoder(input_embeddings.view(1, input_embeddings.shape[1], -1))
 
-        # Get score for each possible edge in the parsing graph, construct score matrix
+        # Get score for each tagsible edge in the parsing graph, construct score matrix
         scores = self.edge_scorer(lstm_output)
         probs_logged = self.log_soft_max(scores)
         seq_len = lstm_output.size(1)
@@ -60,19 +60,18 @@ class KiperwasserDependencyParser(nn.Module):
 
         return loss, predicted_tree
 
-# todo read infer
     def infer(self, sentence):
         with torch.no_grad():
-            word_idx_tensor, pos_idx_tensor, _ = sentence
+            word_idx_tensor, tag_idx_tensor, _ = sentence
 
-            # Pass word_idx and pos_idx through their embedding layers
-            pos_embbedings = self.pos_embedder(pos_idx_tensor.to(self.device))
+            # Pass word_idx and tag_idx through their embedding layers
+            tag_embbedings = self.tag_embedder(tag_idx_tensor.to(self.device))
             word_embbedings = self.word_embedder(word_idx_tensor.to(self.device))
 
             # Concat both embedding outputs
-            input_embeddings = torch.cat((word_embbedings, pos_embbedings), dim=2)
+            input_embeddings = torch.cat((word_embbedings, tag_embbedings), dim=2)
 
-            # Get Bi-LSTM hidden representation for each word+pos in sentence
+            # Get Bi-LSTM hidden representation for each word+tag in sentence
             lstm_output, _ = self.encoder(input_embeddings.view(1, input_embeddings.shape[1], -1))
 
             # Get score for each possible edge in the parsing graph, construct score matrix

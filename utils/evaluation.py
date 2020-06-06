@@ -4,12 +4,13 @@ import os
 import matplotlib
 import matplotlib.pyplot as plt
 from contextlib import nullcontext
+import seaborn as sns
 
 matplotlib.use('Agg')
 
 
+# TODO generate comp loss
 def run_and_evaluate(model, dataloader, optimizer=None, acumelate_grad_steps=None, is_test = False):
-    # TODO generate comp loss
     total_acc,  total_loss = 0, 0
     i = 0
     # torch.no_grad - temp covert all grad flags to False
@@ -39,15 +40,16 @@ def num_of_correct_one_sen(pred_heads, true_heads):
     return float((pred_heads.eq(true_heads)).sum())
 
 def create_graph(train_list, test_list, label):
+    sns.set()
     color = "red" if label == "Accuracy" else "blue"
     plt.figure()
-    plt.plot(train_list, c=color, label=label + '_train', fmt='-')
-    plt.plot(test_list, c=color, label=label + '_test',  fmt='--')
+    plt.plot(train_list, c=color, label=label + '_train', linestyle='-')
+    plt.plot(test_list, c=color, label=label + '_test',  linestyle='--')
     plt.xlabel("Epochs")
     plt.ylabel("Value")
     plt.legend()
     plt.savefig(f'Graphs/{label}.png')
-
+    plt.close()
 
 
 def run_all_models(models_dir,test_dataloader):
