@@ -1,10 +1,6 @@
 import torch
 import torch.nn as nn
 
-from itertools import product
-import torch.nn.functional as F
-from torch.utils.data import TensorDataset, DataLoader
-
 
 class MLP(nn.Module):
     def __init__(self, input_dim, hidden_dim):
@@ -21,6 +17,7 @@ class MLP(nn.Module):
         seq_len = vectors.size(1) # sentence len - num of word in sen
         MLP_rep_h = (torch.zeros((seq_len, self.hidden_dim))).to(self.device)
         MLP_rep_m = (torch.zeros((seq_len, self.hidden_dim))).to(self.device)
+
         vectors = vectors.squeeze(0)
 
         for i, vec in enumerate(vectors):
@@ -28,8 +25,8 @@ class MLP(nn.Module):
             MLP_rep_m[i] = self.layer_1_m(vec)
 
         # TODO matrix to layer -> change dim in layer
-        # MLP_rep_h = self.layer_1_h(vectors)
-        # MLP_rep_m = self.layer_1_m(vectors)
+        # MLP_rep_h_full = self.layer_1_h(vectors)
+        # MLP_rep_m_full = self.layer_1_m(vectors)
 
         scores = (torch.zeros((seq_len, seq_len))).to(self.device)
         for h in range(seq_len):

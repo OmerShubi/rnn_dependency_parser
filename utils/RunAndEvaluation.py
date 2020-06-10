@@ -1,3 +1,5 @@
+import datetime
+
 import torch
 import tqdm
 import os
@@ -48,7 +50,7 @@ def create_graph(train_list, test_list, label):
     plt.xlabel("Epochs")
     plt.ylabel("Value")
     plt.legend()
-    plt.savefig(f'Graphs/{label}.png')
+    plt.savefig(f'Graphs/{label}_{datetime.datetime.now().strftime("%d-%m-%H%M")}.png')
     plt.close()
 
 

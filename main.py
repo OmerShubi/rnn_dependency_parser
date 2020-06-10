@@ -1,6 +1,7 @@
 # Imports
 import torch.optim as optim
 from torch import load
+from torch.utils.data import DataLoader
 
 from DependencyParserModel import *
 from utils.DataPreprocessing import *
@@ -9,12 +10,12 @@ from utils.RunAndEvaluation import *
 # Hyper Params
 WORD_EMBEDDING_DIM = 100
 TAG_EMBEDDING_DIM = 25
-EPOCHS = 30
+EPOCHS = 10
 LEARNING_RATE = 0.01  # TODO
 ACUMULATE_GRAD_STEPS = 5  # This is the actual batch_size, while we officially use batch_size=1
 DEBUG = False
-run_train = False
-load_model_and_run = True
+run_train = True
+load_model_and_run = False
 path_model = "models/model_epoch20.pth"
 
 
@@ -80,7 +81,7 @@ def main():
             # Evaluate on test
             test_acc, test_loss = run_and_evaluate(model,
                                                    test_dataloader,
-                                                   is_test=True)  # uses chu-liu
+                                                   is_test=True)
 
             # Statistics for plots
             loss_train_list.append(train_loss)

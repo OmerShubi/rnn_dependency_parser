@@ -80,11 +80,11 @@ class KiperwasserDependencyParser(nn.Module):
                 return torch.from_numpy(predicted_tree_heads)
 
     @staticmethod
-    def nll_loss(scores, tree, device):
+    def nll_loss(probs_logged, tree, device):
         loss = torch.tensor(0, dtype=torch.float).to(device)
         tree_length = tree.size(0)
         for m, h in enumerate(tree):
-            loss -= scores[h, m]
+            loss -= probs_logged[h, m]
         return loss / tree_length
 
 
