@@ -14,23 +14,19 @@ class MLP(nn.Module):
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     def forward(self, vectors):
-        seq_len = vectors.size(1) # sentence len - num of word in sen
-        MLP_rep_h = (torch.zeros((seq_len, self.hidden_dim))).to(self.device)
-        MLP_rep_m = (torch.zeros((seq_len, self.hidden_dim))).to(self.device)
 
-        vectors = vectors.squeeze(0)
+        # X1 = W_half1*vh, X2 = W_half2*vm
+        MLP_rep_m = self.layer_1_m(vectors).to(self.device)
+        MLP_rep_h = self.layer_1_h(vectors).to(self.device)
 
-        for i, vec in enumerate(vectors):
-            MLP_rep_h[i] = self.layer_1_h(vec)
-            MLP_rep_m[i] = self.layer_1_m(vec)
+        # Hack for creating all h,m pairs to get W1x+b1 quickly
+        MLP_rep_h1 = MLP_rep_h.squeeze().unsqueeze(1)  # [seq_len, 1, dim]
+        MLP_rep_m2 = MLP_rep_m.repeat(MLP_rep_h.squeeze().shape[0], 1, 1)
+        MLP_rep_h2 = MLP_rep_h1.repeat(1, MLP_rep_m.squeeze().shape[0], 1)
 
-        # TODO matrix to layer -> change dim in layer
-        # MLP_rep_h_full = self.layer_1_h(vectors)
-        # MLP_rep_m_full = self.layer_1_m(vectors)
+        # X1 + X2
+        MLP_rep_matrix = torch.add(MLP_rep_m2, MLP_rep_h2)
 
-        scores = (torch.zeros((seq_len, seq_len))).to(self.device)
-        for h in range(seq_len):
-            for m in range(seq_len):
-                curr_addition = torch.add(MLP_rep_h[h], MLP_rep_m[m]) # W_half1*vh +W_half2*vm
-                scores[h, m] = self.layer_2(self.activation(curr_addition)) # W2*tahn(W1x+b1)+b2
+        # Activation + Layer 2
+        scores = self.layer_2(self.activation(MLP_rep_matrix)).squeeze()# W2*tahn(W1x+b1)+b2
         return scores
