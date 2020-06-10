@@ -3,18 +3,27 @@ import torch.nn as nn
 from utils.DataPreprocessing import *
 from MLP import *
 from contextlib import nullcontext
-
+import random
 
 
 class KiperwasserDependencyParser(nn.Module):
     # TODO lstm_out_dim use
-    def __init__(self, word_dict, tag_dict, tag_embedding_dim=25, word_embedding_dim=100,
-                 lstm_out_dim=None, word_embeddings=None, hidden_dim=None, hidden_dim_mlp=100, bilstm_layers=2):
+    def __init__(self, word_dict, tag_dict, word_list, tag_list,
+                 tag_embedding_dim=25, word_embedding_dim=100,
+                 lstm_out_dim=None, word_embeddings=None, hidden_dim=None,
+                 hidden_dim_mlp=100, bilstm_layers=2, dropout=True, alpha=0.25):
         super(KiperwasserDependencyParser, self).__init__()
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
+        self.dropout = dropout
         self.word_dict = word_dict
         self.tag_dict = tag_dict
+        self.tag_list = tag_list
+        self.word_list = word_list
+        self.unknown_word_idx = 1 # TODO
+        self.unknown_tag_idx = 1
+        self.root_idx = 0
+        self.alpha = alpha
+
 
         if word_embeddings:
             self.word_embedder = nn.Embedding.from_pretrained(word_embeddings, freeze=False)
@@ -51,6 +60,17 @@ class KiperwasserDependencyParser(nn.Module):
         cm = torch.no_grad() if is_comp else nullcontext()
         with cm:
             word_idx_tensor, tag_idx_tensor, true_tree_heads = sentence
+
+            if self.dropout:
+                for i, word in enumerate(word_idx_tensor[0]):
+                    actual_word_idx = word.item()
+                    if actual_word_idx != self.unknown_word_idx and actual_word_idx != self.root_idx:
+                        freq_of_word = self.word_dict[self.word_list[actual_word_idx]]
+                        prob_word = float(self.alpha) / (self.alpha + freq_of_word)
+                        if random.random() < prob_word:
+                            word_idx_tensor[0, i] = self.unknown_word_idx
+                            tag_idx_tensor[0, i] = self.unknown_tag_idx
+
 
             # Pass word_idx and tag_idx through their embedding layers
             tag_embbedings = self.tag_embedder(tag_idx_tensor.to(self.device))

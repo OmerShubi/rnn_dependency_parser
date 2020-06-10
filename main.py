@@ -37,9 +37,11 @@ def main():
         path_train = data_dir + "train.labeled"
         path_test = data_dir + "test.labeled"
     logger.debug(f"Starting train: {path_train} test:{path_test}")
+
     # Data Preprocessing
     # Create Dictionaries of counts of words and tags from train + test
     word_dict, tag_dict = get_vocabs([path_train, path_test])
+    # word_dict, tag_dict = get_vocabs([path_train]) TODO
 
     # Prep Train Data
     train = DepDataset(word_dict,
@@ -56,7 +58,10 @@ def main():
     test_dataloader = DataLoader(test, shuffle=False)
 
     # Dependency Parser Model
-    model = KiperwasserDependencyParser(word_dict, tag_dict)
+    model = KiperwasserDependencyParser(word_dict=word_dict,
+                                        tag_dict=tag_dict,
+                                        word_list=train.words_list,
+                                        tag_list=train.tags_list)
 
     # Determine if have GPU
     use_cuda = torch.cuda.is_available()
