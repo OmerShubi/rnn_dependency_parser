@@ -1,5 +1,4 @@
 from chu_liu_edmonds import decode_mst
-import torch.nn as nn
 from utils.DataPreprocessing import *
 from MLP import *
 from contextlib import nullcontext
@@ -11,7 +10,7 @@ class KiperwasserDependencyParser(nn.Module):
     def __init__(self, word_dict, tag_dict, word_list, tag_list,
                  tag_embedding_dim=25, word_embedding_dim=100,
                  lstm_out_dim=None, word_embeddings=None, hidden_dim=None,
-                 hidden_dim_mlp=100, bilstm_layers=2, dropout=True, alpha=0.25):
+                 hidden_dim_mlp=100, bilstm_layers=2, dropout=True, dropout_alpha=0.25):
         super(KiperwasserDependencyParser, self).__init__()
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.dropout = dropout
@@ -22,7 +21,7 @@ class KiperwasserDependencyParser(nn.Module):
         self.unknown_word_idx = 1 # TODO
         self.unknown_tag_idx = 1
         self.root_idx = 0
-        self.alpha = alpha
+        self.alpha = dropout_alpha
 
 
         if word_embeddings:

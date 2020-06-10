@@ -1,5 +1,5 @@
 from torch.utils.data.dataset import Dataset
-from collections import Counter, defaultdict
+from collections import Counter
 from torchtext.vocab import Vocab
 import torch
 
