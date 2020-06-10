@@ -1,12 +1,10 @@
 # Imports
-import numpy as np
 import torch.optim as optim
-from torch.utils.data.dataloader import DataLoader
+from torch import load
+
 from DependencyParserModel import *
-import tqdm
-from utils.RunAndEvaluation import *
-import matplotlib.pyplot as plt
 from utils.DataPreprocessing import *
+from utils.RunAndEvaluation import *
 
 # Hyper Params
 WORD_EMBEDDING_DIM = 100
@@ -15,6 +13,10 @@ EPOCHS = 30
 LEARNING_RATE = 0.01  # TODO
 ACUMULATE_GRAD_STEPS = 5  # This is the actual batch_size, while we officially use batch_size=1
 DEBUG = False
+run_train = False
+load_model_and_run = True
+path_model = "models/model_epoch20.pth"
+
 
 # uncomment for debugging
 # CUDA_LAUNCH_BLOCKING = 1 #
@@ -61,41 +63,51 @@ def main():
     optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
 
     # Training
-    print("Training Started")
-    accuracy_train_list = []
-    loss_train_list = []
-    loss_test_list = []
-    accuracy_test_list = []
-    for epoch in range(1, EPOCHS + 1):
-        # Forward + Backward on train
-        train_acc, train_loss = run_and_evaluate(model,
-                                                 train_dataloader,
-                                                 optimizer=optimizer,
-                                                 acumelate_grad_steps=ACUMULATE_GRAD_STEPS)
 
+    if run_train:
+        print("Training Started")
+        accuracy_train_list = []
+        loss_train_list = []
+        loss_test_list = []
+        accuracy_test_list = []
+        for epoch in range(1, EPOCHS + 1):
+            # Forward + Backward on train
+            train_acc, train_loss = run_and_evaluate(model,
+                                                     train_dataloader,
+                                                     optimizer=optimizer,
+                                                     acumelate_grad_steps=ACUMULATE_GRAD_STEPS)
+
+            # Evaluate on test
+            test_acc, test_loss = run_and_evaluate(model,
+                                                   test_dataloader,
+                                                   is_test=True)  # uses chu-liu
+
+            # Statistics for plots
+            loss_train_list.append(train_loss)
+            loss_test_list.append(test_acc)
+            accuracy_train_list.append(train_acc)
+            accuracy_test_list.append(test_acc)
+
+            print(f"Epoch {epoch} Completed,\tCurr Train Loss {train_loss}\t"
+                  f"Curr Train Accuracy: {train_acc}\t Curr Test Accuracy: {test_acc}\t"
+                  f"Curr Test Loss: {test_loss}\n")
+
+            # Plot Accuracy
+            create_graph(accuracy_train_list, accuracy_test_list, "Accuracy")
+
+            # Plot Loss
+            create_graph(loss_train_list, loss_test_list, "Loss")
+
+            # Save model
+            torch.save(model, f"models/model_epoch{epoch}.pth")
+
+    if load_model_and_run:
+        model = load(path_model)
         # Evaluate on test
         test_acc, test_loss = run_and_evaluate(model,
                                                test_dataloader,
-                                               is_test=True)  # uses chu-liu
-
-        # Statistics for plots
-        loss_train_list.append(train_loss)
-        loss_test_list.append(test_acc)
-        accuracy_train_list.append(train_acc)
-        accuracy_test_list.append(test_acc)
-
-        print(f"Epoch {epoch} Completed,\tCurr Train Loss {train_loss}\t"
-              f"Curr Train Accuracy: {train_acc}\t Curr Test Accuracy: {test_acc}\t"
-              f"Curr Test Loss: {test_loss}\n")
-
-        # Plot Accuracy
-        create_graph(accuracy_train_list, accuracy_test_list, "Accuracy")
-
-        # Plot Loss
-        create_graph(loss_train_list, loss_test_list, "Loss")
-
-        # Save model
-        torch.save(model, f"models/model_epoch{epoch}.pth")
+                                               is_test=True)
+        print("test acc, test loss:", test_acc, test_loss)
 
 
 if __name__ == "__main__":
