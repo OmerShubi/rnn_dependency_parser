@@ -40,8 +40,8 @@ def main():
 
     # Data Preprocessing
     # Create Dictionaries of counts of words and tags from train + test
-    word_dict, tag_dict = get_vocabs([path_train, path_test])
-    # word_dict, tag_dict = get_vocabs([path_train]) TODO
+    # word_dict, tag_dict = get_vocabs([path_train, path_test]) # TODO delete, combine train and test files for competition
+    word_dict, tag_dict = get_vocabs([path_train])
 
     # Prep Train Data
     train = DepDataset(word_dict,
