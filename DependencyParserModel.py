@@ -9,7 +9,7 @@ from contextlib import nullcontext
 class KiperwasserDependencyParser(nn.Module):
     # TODO lstm_out_dim use
     def __init__(self, word_dict, tag_dict, tag_embedding_dim=25, word_embedding_dim=100,
-                 lstm_out_dim=None, word_embeddings=None, hidden_dim=None, hidden_dim_mlp=100):
+                 lstm_out_dim=None, word_embeddings=None, hidden_dim=None, hidden_dim_mlp=100, bilstm_layers=2):
         super(KiperwasserDependencyParser, self).__init__()
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -31,7 +31,7 @@ class KiperwasserDependencyParser(nn.Module):
 
         self.encoder = nn.LSTM(input_size=self.emb_dim,
                                hidden_size=self.hidden_dim,
-                               num_layers=2,
+                               num_layers=bilstm_layers,
                                bidirectional=True,
                                batch_first=True)
 

@@ -2,6 +2,7 @@
 import torch.optim as optim
 from torch import load
 from torch.utils.data import DataLoader
+import logging.config
 
 from DependencyParserModel import *
 from utils.DataPreprocessing import *
@@ -17,12 +18,16 @@ DEBUG = False
 run_train = True
 load_model_and_run = False
 path_model = "models/model_epoch20.pth"
-
+MSG = ""
 
 # uncomment for debugging
 # CUDA_LAUNCH_BLOCKING = 1 #
 
 def main():
+    # Gets or creates a logger
+    logging.config.fileConfig('logging.conf')
+    logger = logging.getLogger(__name__)
+
     # Data paths
     data_dir = "Data/"
     if DEBUG:
@@ -31,7 +36,7 @@ def main():
     else:
         path_train = data_dir + "train.labeled"
         path_test = data_dir + "test.labeled"
-
+    logger.debug(f"Starting train: {path_train} test:{path_test}")
     # Data Preprocessing
     # Create Dictionaries of counts of words and tags from train + test
     word_dict, tag_dict = get_vocabs([path_train, path_test])

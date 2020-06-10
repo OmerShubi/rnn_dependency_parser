@@ -61,7 +61,7 @@ def run_all_models(models_dir,test_dataloader):
         filepath = models_dir + os.sep + filename
         if filepath.endswith(".pth"):
             print("evaluating model saved in:{}".format(filepath))
-            model=torch.load(filepath)
+            model = torch.load(filepath)
             curr_acc, curr_loss = run_and_evaluate(model, test_dataloader)
             acc_list.append(curr_acc)
             loss_list.append(curr_loss)
