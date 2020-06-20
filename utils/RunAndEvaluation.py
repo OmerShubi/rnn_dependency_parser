@@ -60,8 +60,8 @@ def run_all_models(models_dir,test_dataloader):
     for filename in sorted(os.listdir(models_dir)):
         filepath = models_dir + os.sep + filename
         if filepath.endswith(".pth"):
-            print("evaluating model saved in:{}".format(filepath))
-            model=torch.load(filepath)
+            logger.debug("evaluating model saved in:{}".format(filepath))
+            model = torch.load(filepath)
             curr_acc, curr_loss = run_and_evaluate(model, test_dataloader)
             acc_list.append(curr_acc)
             loss_list.append(curr_loss)

@@ -1,10 +1,7 @@
-import numpy as np
-import torch.optim as optim
+
 from torch.utils.data.dataloader import DataLoader
 import DependencyParserModel
-import tqdm
 from utils.RunAndEvaluation import *
-import matplotlib.pyplot as plt
 from torch import load
 from utils.DataPreprocessing import *
 
