@@ -17,7 +17,8 @@ DEBUG = True
 # uncomment for debugging
 # CUDA_LAUNCH_BLOCKING = 1 #
 
-def optimization_wrapper(args, logger, word_dict, tag_dict, path_train, path_test, learning_rate, word_embedding_dim):
+def optimization_wrapper(args, logger, word_dict, tag_dict, path_train, path_test, learning_rate, word_embedding_dim,
+                         tag_embedding_dim, accumulate_grad_step, optimizer_method):
 
     # Prep Train Data
     train = DepDataset(word_dict=word_dict,
@@ -40,7 +41,7 @@ def optimization_wrapper(args, logger, word_dict, tag_dict, path_train, path_tes
                                         tag_dict=tag_dict,
                                         word_list=train.words_list,
                                         tag_list=train.tags_list,
-                                        tag_embedding_dim=args.tag_embedding_dim,
+                                        tag_embedding_dim=tag_embedding_dim,
                                         word_embedding_dim=word_embedding_dim,
                                         lstm_out_dim=args.lstm_out_dim,
                                         pretrained_embedding=train.word_vectors,
@@ -57,7 +58,8 @@ def optimization_wrapper(args, logger, word_dict, tag_dict, path_train, path_tes
         logger.debug("using cuda")
         model.cuda()
 
-    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+    optimizer_method = eval(optimizer_method)
+    optimizer = optimizer_method(model.parameters(), lr=learning_rate)
 
     # Training
 
@@ -83,7 +85,7 @@ def optimization_wrapper(args, logger, word_dict, tag_dict, path_train, path_tes
             # Forward + Backward on train
             _, _ = run_and_evaluate(model,
                                                      train_dataloader,
-                                                     accumulate_grad_steps=args.accumulate_grad_step,
+                                                     accumulate_grad_steps=accumulate_grad_step,
                                                      optimizer=optimizer)
 
             # Evaluate on train
@@ -127,8 +129,9 @@ def optimization_wrapper(args, logger, word_dict, tag_dict, path_train, path_tes
             writer = csv.writer(csv_file)
             max_accur = max(accuracy_test_list)
             writer.writerow([args.num_epochs,np.argmax(np.array(accuracy_test_list)), max_accur, learning_rate,
-                             args.accumulate_grad_step, args.tag_embedding_dim,word_embedding_dim,args.lstm_out_dim,args.lstm_hidden_dim,
-                             args.pretrained_embedding,args.mlp_hidden_dim, args.bilstm_layers, args.dropout_alpha,args.msg, end_time])
+                             accumulate_grad_step, tag_embedding_dim, word_embedding_dim, args.lstm_out_dim, args.lstm_hidden_dim,
+                             args.pretrained_embedding, args.mlp_hidden_dim, args.bilstm_layers, args.dropout_alpha, optimizer_method,
+                             args.msg, end_time])
         return max_accur
 
 def main():
@@ -139,7 +142,7 @@ def main():
     parser.add_argument('--word_embedding_dim', type=int, default=100)
     parser.add_argument('--tag_embedding_dim', type=int, default=25)
     parser.add_argument('--num_epochs', type=int, default=30)
-    parser.add_argument('--learning_rate', type=int, nargs="+", default=0.01)
+    parser.add_argument('--learning_rate', type=int, default=0.01)
     parser.add_argument('--accumulate_grad_step', type=int, default=5)
     parser.add_argument('--msg', help='msg to write in log file', type=str, default='')
     parser.add_argument('--comp',  action='store_true', default=False)
@@ -183,16 +186,37 @@ def main():
             {
                 "name": "word_embedding_dim",
                 "type": "range",
-                "value_type": int,
-                "bounds": [100, 300],
+                "value_type": "int",
+                "bounds": [100, 1000],
+                "log_scale": True
+            },
+            {
+                "name": "tag_embedding_dim",
+                "type": "range",
+                "value_type": "int",
+                "bounds": [10, 100],
+                "log_scale": True
+            },
+            {
+                "name": "accumulate_grad_step",
+                "type": "range",
+                "value_type": "int",
+                "bounds": [1, 10],
+            },
+            {
+                "name": "optimizer_method",
+                "type": "choice",
+                "is_numeric": False,
+                "values": ["optim.Adam", "optim.SGD"],
             }
         ],
         evaluation_function=lambda p : optimization_wrapper(args, logger, word_dict, tag_dict, path_train, path_test, p["learning_rate"]
-                                                            ,p["word_embedding_dim"]),
+                                                            ,p["word_embedding_dim"], p["tag_embedding_dim"], p["accumulate_grad_step"],
+                                                            p["optimizer_method"]),
         minimize=False,
     )
 
-    print(best_parameters)
+    print(best_parameters, best_values)
 
 if __name__ == "__main__":
     main()
