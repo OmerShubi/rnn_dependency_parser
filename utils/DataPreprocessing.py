@@ -93,12 +93,12 @@ class DepDataReader:
 
 class DepDataset(Dataset):
     # TODO comp use
-    def __init__(self, word_dict, tag_dict, file_path: str, pretrained_embedding, comp):
+    def __init__(self, word_dict, tag_dict, file_path: str, pretrained_embedding, comp, min_freq):
         super().__init__()
         self.file = file_path
         self.word_vocab_size = len(word_dict)  # number of words in vocabulary
         # TODO delete self.word_vectors
-        self.word_to_idx_dict, self.words_list, self.word_vectors = DepDataset.init_word_embeddings(word_dict, pretrained_embedding)
+        self.word_to_idx_dict, self.words_list, self.word_vectors = DepDataset.init_word_embeddings(word_dict, pretrained_embedding, min_freq)
         self.tag_to_idx_dict, self.tags_list = DepDataset.init_tag_vocab(tag_dict)
         # TODO delete self.unknown_idx,root_idx
         self.unknown_idx = self.word_to_idx_dict.get(UNKNOWN_TOKEN)
@@ -119,17 +119,15 @@ class DepDataset(Dataset):
         return word_embed_idx, tag_embed_idx, head_indexes_in_sentence
 
     @staticmethod
-    def init_word_embeddings(word_dict, pretrained_vector_embedding):
-        # TODO add freq_min?
+    def init_word_embeddings(word_dict, pretrained_vector_embedding, min_freq):
         if pretrained_vector_embedding:
             glove = Vocab(Counter(word_dict), vectors=pretrained_vector_embedding, specials=SPECIAL_TOKENS)
         else:
-            glove = Vocab(Counter(word_dict), vectors=None, specials=SPECIAL_TOKENS)
+            glove = Vocab(Counter(word_dict), vectors=None, specials=SPECIAL_TOKENS, min_freq=min_freq)
         return glove.stoi, glove.itos, glove.vectors
 
     @staticmethod
     def init_tag_vocab(tag_dict):
-        # TODO add freq_min?
         glove = Vocab(Counter(tag_dict), vectors=None, specials=SPECIAL_TOKENS)
 
         return glove.stoi, glove.itos

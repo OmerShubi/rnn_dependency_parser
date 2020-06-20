@@ -12,28 +12,44 @@ import numpy as np
 import time
 from ax import optimize
 
-DEBUG = True
 
 # uncomment for debugging
 # CUDA_LAUNCH_BLOCKING = 1 #
+N_EPOCHS_STOP = 5
 
-def optimization_wrapper(args, logger, word_dict, tag_dict, path_train, path_test, learning_rate, word_embedding_dim,
-                         tag_embedding_dim, accumulate_grad_step, optimizer_method):
+
+parameters_basic_model = {"learning_rate": 0.001,
+                "word_embedding_dim": 100,
+                "tag_embedding_dim": 25,
+                "accumulate_grad_step": 5,
+                "optimizer_method": "optim.Adam",
+                "lstm_hidden_dim": 125,
+                "pretrained_embedding" : None,
+                "mlp_hidden_dim": 100,
+                "bilstm_layers": 2,
+                "dropout_alpha": 0.25,
+                "activation": "nn.Tanh",
+                "min_freq": 1
+                }
+
+def optimization_wrapper(args, logger, word_dict, tag_dict, path_train, path_test, params_dict):
 
     # Prep Train Data
     train = DepDataset(word_dict=word_dict,
                        tag_dict=tag_dict,
                        file_path=path_train,
-                       pretrained_embedding=args.pretrained_embedding,
-                       comp=args.comp)
+                       pretrained_embedding=params_dict["pretrained_embedding"],
+                       comp=args.comp,
+                       min_freq=params_dict["min_freq"])
     train_dataloader = DataLoader(train, shuffle=True)
 
     # Prep Test Data
     test = DepDataset(word_dict=word_dict,
                        tag_dict=tag_dict,
                        file_path=path_test,
-                       pretrained_embedding=args.pretrained_embedding,
-                       comp=args.comp)
+                       pretrained_embedding=params_dict["pretrained_embedding"],
+                       comp=args.comp,
+                      min_freq=params_dict["min_freq"])
     test_dataloader = DataLoader(test, shuffle=False)
 
     # Dependency Parser Model
@@ -41,14 +57,14 @@ def optimization_wrapper(args, logger, word_dict, tag_dict, path_train, path_tes
                                         tag_dict=tag_dict,
                                         word_list=train.words_list,
                                         tag_list=train.tags_list,
-                                        tag_embedding_dim=tag_embedding_dim,
-                                        word_embedding_dim=word_embedding_dim,
-                                        lstm_out_dim=args.lstm_out_dim,
+                                        tag_embedding_dim=params_dict["tag_embedding_dim"],
+                                        word_embedding_dim=params_dict["word_embedding_dim"],
                                         pretrained_embedding=train.word_vectors,
-                                        lstm_hidden_dim=args.lstm_hidden_dim,
-                                        mlp_hidden_dim=args.mlp_hidden_dim,
-                                        bilstm_layers=args.bilstm_layers,
-                                        dropout_alpha=args.dropout_alpha)
+                                        lstm_hidden_dim=params_dict["lstm_hidden_dim"],
+                                        mlp_hidden_dim=params_dict["mlp_hidden_dim"],
+                                        bilstm_layers=params_dict["bilstm_layers"],
+                                        dropout_alpha=params_dict["dropout_alpha"],
+                                        activation=params_dict["activation"])
 
     # Determine if have GPU
     use_cuda = torch.cuda.is_available()
@@ -58,8 +74,8 @@ def optimization_wrapper(args, logger, word_dict, tag_dict, path_train, path_tes
         logger.debug("using cuda")
         model.cuda()
 
-    optimizer_method = eval(optimizer_method)
-    optimizer = optimizer_method(model.parameters(), lr=learning_rate)
+    optimizer_method = eval(params_dict["optimizer_method"])
+    optimizer = optimizer_method(model.parameters(), lr=params_dict["learning_rate"])
 
     # Training
 
@@ -81,25 +97,27 @@ def optimization_wrapper(args, logger, word_dict, tag_dict, path_train, path_tes
         loss_train_list = []
         loss_test_list = []
         accuracy_test_list = []
+        max_test_accur = -1
         for epoch in range(1, args.num_epochs + 1):
             # Forward + Backward on train
-            _, _ = run_and_evaluate(model,
-                                                     train_dataloader,
-                                                     accumulate_grad_steps=accumulate_grad_step,
-                                                     optimizer=optimizer)
-
-            # Evaluate on train
             train_acc, train_loss = run_and_evaluate(model,
                                                      train_dataloader,
-                                                     is_test=True)
+                                                     accumulate_grad_steps=params_dict["accumulate_grad_step"],
+                                                     optimizer=optimizer)
+
+            # # Evaluate on train
+            # train_acc, train_loss = run_and_evaluate(model,
+            #                                          train_dataloader,
+            #                                          is_test=True)
 
             start_time_test = time.time()
             # Evaluate on test
             test_acc, test_loss = run_and_evaluate(model,
                                                    test_dataloader,
                                                    is_test=True)
-            if epoch == args.num_epochs:
+            if epoch == 1:
                 logger.debug(f"tagging test took {round(time.time() - start_time_test, 2)} seconds")
+
 
             # Statistics for plots
             loss_train_list.append(train_loss)
@@ -110,6 +128,15 @@ def optimization_wrapper(args, logger, word_dict, tag_dict, path_train, path_tes
             logger.debug(f"Epoch {epoch} Completed,\tCurr Train Loss {train_loss}\t"
                          f"Curr Train Accuracy: {train_acc}\t Curr Test Loss: {test_loss}\t"
                          f"Curr Test Accuracy: {test_acc}\n")
+
+            if test_acc > max_test_accur:
+                epochs_no_improve = 0
+                max_test_accur = test_acc
+            else:
+                epochs_no_improve += 1
+            if epochs_no_improve == N_EPOCHS_STOP:
+                logger.debug(f'Early stopping after epoch {epoch}')
+                break
 
         end_time = datetime.datetime.now().strftime('%d-%m-%H%M')
 
@@ -128,10 +155,8 @@ def optimization_wrapper(args, logger, word_dict, tag_dict, path_train, path_tes
         with open("results/results.csv", 'a') as csv_file:
             writer = csv.writer(csv_file)
             max_accur = max(accuracy_test_list)
-            writer.writerow([args.num_epochs,np.argmax(np.array(accuracy_test_list)), max_accur, learning_rate,
-                             accumulate_grad_step, tag_embedding_dim, word_embedding_dim, args.lstm_out_dim, args.lstm_hidden_dim,
-                             args.pretrained_embedding, args.mlp_hidden_dim, args.bilstm_layers, args.dropout_alpha, optimizer_method,
-                             args.msg, end_time])
+            writer.writerow([args.debug, args.num_epochs,np.argmax(np.array(accuracy_test_list)), max_accur, args.msg, end_time]+
+                            list(params_dict.values()))
         return max_accur
 
 def main():
@@ -139,19 +164,11 @@ def main():
     parser.add_argument('--skip_train', help='if skip train', action='store_true', default=False)
     parser.add_argument('--model_path', help='if skip train - path model to load', type=str,
                         default="models/model1.pth")
-    parser.add_argument('--word_embedding_dim', type=int, default=100)
-    parser.add_argument('--tag_embedding_dim', type=int, default=25)
     parser.add_argument('--num_epochs', type=int, default=30)
-    parser.add_argument('--learning_rate', type=int, default=0.01)
-    parser.add_argument('--accumulate_grad_step', type=int, default=5)
     parser.add_argument('--msg', help='msg to write in log file', type=str, default='')
     parser.add_argument('--comp',  action='store_true', default=False)
-    parser.add_argument('--pretrained_embedding', default=None) # "glove.6B.100d"
-    parser.add_argument('--dropout_alpha', default=None)
-    parser.add_argument('--lstm_out_dim', default=None)
-    parser.add_argument('--lstm_hidden_dim', default=None)
-    parser.add_argument('--mlp_hidden_dim', type=int, default=100)
-    parser.add_argument('--bilstm_layers', type=int, default=2)
+    parser.add_argument('--total_trails',  type=int, default=20)
+    parser.add_argument('--debug', action='store_true', default=False)
     args = parser.parse_args()
 
 
@@ -161,7 +178,7 @@ def main():
 
     # Data paths
     data_dir = "Data/"
-    if DEBUG:
+    if args.debug:
         path_train = data_dir + "small_train.labeled"
         path_test = data_dir + "small_test.labeled"
     else:
@@ -180,43 +197,86 @@ def main():
         parameters=[
             {
                 "name": "learning_rate",
-                "type": "range",
-                "bounds": [0.001, 0.01],
+                "type": "choice",
+                "is_numeric": False,
+                "values": [0.001, 0.002, 0.01, 0.02, 0.05, 1.0],
             },
             {
                 "name": "word_embedding_dim",
-                "type": "range",
-                "value_type": "int",
-                "bounds": [100, 1000],
-                "log_scale": True
+                "type": "choice",
+                "is_numeric": False,
+                "values": [25, 50, 100, 200, 300],
             },
             {
                 "name": "tag_embedding_dim",
-                "type": "range",
-                "value_type": "int",
-                "bounds": [10, 100],
-                "log_scale": True
+                "type": "choice",
+                "is_numeric": False,
+                "values": [5, 10, 25, 50],
             },
             {
                 "name": "accumulate_grad_step",
-                "type": "range",
-                "value_type": "int",
-                "bounds": [1, 10],
+                "type": "choice",
+                "is_numeric": False,
+                "values": [2, 4, 5, 10],
             },
             {
                 "name": "optimizer_method",
                 "type": "choice",
                 "is_numeric": False,
-                "values": ["optim.Adam", "optim.SGD"],
-            }
+                "values": ["optim.Adam", "optim.SGD", "optim.AdamW", "optim.Adadelta"],
+            },
+            {
+                "name": "lstm_hidden_dim",
+                "type": "choice",
+                "is_numeric": False,
+                "values": [125, 200, 300, 0],
+            },
+            {
+                "name": "pretrained_embedding",
+                "type": "choice",
+                "is_numeric": False,
+                "values": ["glove.6B.50d", "glove.6B.100d", "glove.6B.200d", "glove.6B.300d",
+                           "glove.840B.300d", "fasttext.en.300d", ""]
+            },
+            {
+                "name": "mlp_hidden_dim",
+                "type": "choice",
+                "is_numeric": False,
+                "values": [50, 100, 150],
+            },
+            {
+                "name": "bilstm_layers",
+                "type": "choice",
+                "is_numeric": False,
+                "values": [1, 2, 3]
+            },
+            {
+                "name": "dropout_alpha",
+                "type": "choice",
+                "is_numeric": False,
+                "values": [0.0, 0.05, 0.1]
+            },
+            {
+                "name": "activation",
+                "type": "choice",
+                "is_numeric": False,
+                "values": ["nn.Tanh", "nn.ReLU", "nn.Sigmoid", "nn.LeakyReLU"]
+            },
+            {
+                "name": "min_freq",
+                "type": "choice",
+                "is_numeric": False,
+                "values": [1, 2, 3, 5]
+            },
         ],
-        evaluation_function=lambda p : optimization_wrapper(args, logger, word_dict, tag_dict, path_train, path_test, p["learning_rate"]
-                                                            ,p["word_embedding_dim"], p["tag_embedding_dim"], p["accumulate_grad_step"],
-                                                            p["optimizer_method"]),
+        evaluation_function=lambda p : optimization_wrapper(args, logger, word_dict, tag_dict, path_train, path_test, p),
         minimize=False,
+        total_trials=args.total_trails,
+        objective_name="UAS accuracy",
+        parameter_constraints=["pretrained_embedding"]
     )
 
-    print(best_parameters, best_values)
+    logger.debug(f"{best_parameters},{best_values[0]}")
 
 if __name__ == "__main__":
     main()

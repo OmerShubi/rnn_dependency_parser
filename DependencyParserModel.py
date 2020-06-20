@@ -8,9 +8,8 @@ import random
 class KiperwasserDependencyParser(nn.Module):
     # TODO lstm_out_dim use
     def __init__(self, word_dict, tag_dict, word_list, tag_list,
-                 tag_embedding_dim, word_embedding_dim,
-                 lstm_out_dim, pretrained_embedding, lstm_hidden_dim,
-                 mlp_hidden_dim, bilstm_layers, dropout_alpha):
+                 tag_embedding_dim, word_embedding_dim, pretrained_embedding, lstm_hidden_dim,
+                 mlp_hidden_dim, bilstm_layers, dropout_alpha, activation):
         super(KiperwasserDependencyParser, self).__init__()
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.dropout = dropout_alpha
@@ -24,7 +23,7 @@ class KiperwasserDependencyParser(nn.Module):
         self.dropout = dropout_alpha
 
 
-        if pretrained_embedding:
+        if pretrained_embedding != None:
             self.word_embedder = nn.Embedding.from_pretrained(pretrained_embedding, freeze=False)
         else:
             self.word_embedder = nn.Embedding(len(self.word_dict), word_embedding_dim)
@@ -33,18 +32,16 @@ class KiperwasserDependencyParser(nn.Module):
 
         self.emb_dim = self.word_embedder.embedding_dim + self.tag_embedder.embedding_dim
 
-        self.lstm_out_dim = lstm_out_dim if lstm_out_dim else self.emb_dim
-
-        self.hidden_dim = lstm_hidden_dim if lstm_hidden_dim else self.emb_dim
+        self.lstm_hidden_dim = lstm_hidden_dim if lstm_hidden_dim else self.emb_dim
 
         self.encoder = nn.LSTM(input_size=self.emb_dim,
-                               hidden_size=self.hidden_dim,
+                               hidden_size=self.lstm_hidden_dim,
                                num_layers=bilstm_layers,
                                bidirectional=True,
                                batch_first=True)
 
-        # input samples dim for MLP is lstm_out_dim*NUM_DIRECTION
-        self.edge_scorer = MLP(self.lstm_out_dim * 2, mlp_hidden_dim)
+        # input samples dim for MLP is lstm_out_dim=lstm_hidden_dim*NUM_DIRECTION
+        self.edge_scorer = MLP(self.lstm_hidden_dim * 2, mlp_hidden_dim, activation)
 
         self.decoder = decode_mst  # This is used to produce the maximum spannning tree during inference
 

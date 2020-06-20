@@ -3,14 +3,14 @@ import torch.nn as nn
 
 
 class MLP(nn.Module):
-    def __init__(self, input_dim, hidden_dim):
+    def __init__(self, input_dim, hidden_dim, activation):
         super(MLP, self).__init__()
         self.hidden_dim = hidden_dim
         # self.hidden_dim - size of each output sample
         self.layer_1_h = torch.nn.Linear(in_features=input_dim, out_features=self.hidden_dim)
         self.layer_1_m = torch.nn.Linear(in_features=input_dim, out_features=self.hidden_dim)
         self.layer_2 = torch.nn.Linear(in_features=self.hidden_dim, out_features=1)
-        self.activation = nn.Tanh()
+        self.activation = eval(activation)()
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
