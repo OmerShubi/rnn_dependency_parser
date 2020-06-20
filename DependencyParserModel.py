@@ -8,12 +8,12 @@ import random
 class KiperwasserDependencyParser(nn.Module):
     # TODO lstm_out_dim use
     def __init__(self, word_dict, tag_dict, word_list, tag_list,
-                 tag_embedding_dim=25, word_embedding_dim=100,
-                 lstm_out_dim=None, word_embeddings=None, hidden_dim=None,
-                 hidden_dim_mlp=100, bilstm_layers=2, dropout=True, dropout_alpha=0.25):
+                 tag_embedding_dim, word_embedding_dim,
+                 lstm_out_dim, pretrained_embedding, lstm_hidden_dim,
+                 mlp_hidden_dim, bilstm_layers, dropout_alpha):
         super(KiperwasserDependencyParser, self).__init__()
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        self.dropout = dropout
+        self.dropout = dropout_alpha
         self.word_dict = word_dict
         self.tag_dict = tag_dict
         self.tag_list = tag_list
@@ -21,11 +21,11 @@ class KiperwasserDependencyParser(nn.Module):
         self.unknown_word_idx = 1 # TODO
         self.unknown_tag_idx = 1
         self.root_idx = 0
-        self.alpha = dropout_alpha
+        self.dropout = dropout_alpha
 
 
-        if word_embeddings:
-            self.word_embedder = nn.Embedding.from_pretrained(word_embeddings, freeze=False)
+        if pretrained_embedding:
+            self.word_embedder = nn.Embedding.from_pretrained(pretrained_embedding, freeze=False)
         else:
             self.word_embedder = nn.Embedding(len(self.word_dict), word_embedding_dim)
 
@@ -35,7 +35,7 @@ class KiperwasserDependencyParser(nn.Module):
 
         self.lstm_out_dim = lstm_out_dim if lstm_out_dim else self.emb_dim
 
-        self.hidden_dim = hidden_dim if hidden_dim else self.emb_dim
+        self.hidden_dim = lstm_hidden_dim if lstm_hidden_dim else self.emb_dim
 
         self.encoder = nn.LSTM(input_size=self.emb_dim,
                                hidden_size=self.hidden_dim,
@@ -44,7 +44,7 @@ class KiperwasserDependencyParser(nn.Module):
                                batch_first=True)
 
         # input samples dim for MLP is lstm_out_dim*NUM_DIRECTION
-        self.edge_scorer = MLP(self.lstm_out_dim*2, hidden_dim_mlp)
+        self.edge_scorer = MLP(self.lstm_out_dim * 2, mlp_hidden_dim)
 
         self.decoder = decode_mst  # This is used to produce the maximum spannning tree during inference
 
@@ -65,7 +65,7 @@ class KiperwasserDependencyParser(nn.Module):
                     actual_word_idx = word.item()
                     if actual_word_idx != self.unknown_word_idx and actual_word_idx != self.root_idx:
                         freq_of_word = self.word_dict[self.word_list[actual_word_idx]]
-                        prob_word = float(self.alpha) / (self.alpha + freq_of_word)
+                        prob_word = float(self.dropout) / (self.dropout + freq_of_word)
                         if random.random() < prob_word:
                             word_idx_tensor[0, i] = self.unknown_word_idx
                             tag_idx_tensor[0, i] = self.unknown_tag_idx

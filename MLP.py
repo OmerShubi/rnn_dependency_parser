@@ -13,6 +13,7 @@ class MLP(nn.Module):
         self.activation = nn.Tanh()
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
+
     def forward(self, vectors):
 
         # X1 = W_half1*vh, X2 = W_half2*vm
@@ -28,5 +29,6 @@ class MLP(nn.Module):
         MLP_rep_matrix = torch.add(MLP_rep_m2, MLP_rep_h2)
 
         # Activation + Layer 2
-        scores = self.layer_2(self.activation(MLP_rep_matrix)).squeeze()# W2*tahn(W1x+b1)+b2
+        scores = self.layer_2(self.activation(MLP_rep_matrix)).squeeze()  # W2*tahn(W1x+b1)+b2
+
         return scores

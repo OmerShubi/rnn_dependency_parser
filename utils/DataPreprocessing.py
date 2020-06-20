@@ -6,7 +6,6 @@ import torch
 ROOT_WORD = ROOT_TAG = "<root>"
 UNKNOWN_TOKEN = UNKNOWN_TAG = "<unk>"
 SPECIAL_TOKENS = [ROOT_WORD, UNKNOWN_TOKEN]
-PRETRAINED_VECTOR_EMBEDDING = "glove.6B.100d"
 
 # TODO min and max thresholds for word occurences
 def get_vocabs(list_of_paths):
@@ -93,14 +92,15 @@ class DepDataReader:
 
 
 class DepDataset(Dataset):
-    # TODO padding use?
     # TODO comp use
-    def __init__(self, word_dict, tag_dict, file_path: str, pretrained_vector_embedding=False, padding=False, comp=False):
+    def __init__(self, word_dict, tag_dict, file_path: str, pretrained_embedding, comp):
         super().__init__()
         self.file = file_path
         self.word_vocab_size = len(word_dict)  # number of words in vocabulary
-        self.word_to_idx_dict, self.words_list, self.word_vectors = DepDataset.init_word_embeddings(word_dict, pretrained_vector_embedding)
+        # TODO delete self.word_vectors
+        self.word_to_idx_dict, self.words_list, self.word_vectors = DepDataset.init_word_embeddings(word_dict, pretrained_embedding)
         self.tag_to_idx_dict, self.tags_list = DepDataset.init_tag_vocab(tag_dict)
+        # TODO delete self.unknown_idx,root_idx
         self.unknown_idx = self.word_to_idx_dict.get(UNKNOWN_TOKEN)
         self.unknown_tag_idx = self.tag_to_idx_dict.get(UNKNOWN_TAG)
         self.root_idx = self.word_to_idx_dict.get(ROOT_WORD)
@@ -108,7 +108,6 @@ class DepDataset(Dataset):
         self.sentences_dataset = datareader.sentences
         sentences_lens = [len(sentence[0])-1 for sentence in self.sentences_dataset]
         self.num_edges = sum(sentences_lens) # num of words
-        self.max_seq_len = max(sentences_lens) + 1 # +1 for root # TODO delete if no padding
         self.num_sentences = len(self.sentences_dataset)
 
     def __len__(self):
@@ -123,7 +122,7 @@ class DepDataset(Dataset):
     def init_word_embeddings(word_dict, pretrained_vector_embedding):
         # TODO add freq_min?
         if pretrained_vector_embedding:
-            glove = Vocab(Counter(word_dict), vectors=PRETRAINED_VECTOR_EMBEDDING, specials=SPECIAL_TOKENS)
+            glove = Vocab(Counter(word_dict), vectors=pretrained_vector_embedding, specials=SPECIAL_TOKENS)
         else:
             glove = Vocab(Counter(word_dict), vectors=None, specials=SPECIAL_TOKENS)
         return glove.stoi, glove.itos, glove.vectors
