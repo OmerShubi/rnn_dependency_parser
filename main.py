@@ -205,7 +205,7 @@ def main():
                 "name": "word_embedding_dim",
                 "type": "choice",
                 "is_numeric": False,
-                "values": [25, 50, 100, 200, 300],
+                "values": [25, 50, 100, 200, 300, 0],
             },
             {
                 "name": "tag_embedding_dim",
@@ -273,7 +273,8 @@ def main():
         minimize=False,
         total_trials=args.total_trails,
         objective_name="UAS accuracy",
-        parameter_constraints=["pretrained_embedding"]
+        parameter_constraints=["(pretrained_embedding and (word_embedding_dim == 0)) or"
+                               " ((pretrained_embedding == '') and (word_embedding_dim != 0))"]
     )
 
     logger.debug(f"{best_parameters},{best_values[0]}")
