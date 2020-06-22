@@ -9,7 +9,7 @@ class KiperwasserDependencyParser(nn.Module):
     # TODO lstm_out_dim use
     def __init__(self, word_dict, tag_dict, word_list, tag_list,
                  tag_embedding_dim, word_embedding_dim, pretrained_embedding, lstm_hidden_dim,
-                 mlp_hidden_dim, bilstm_layers, dropout_alpha, activation, freeze_embedding):
+                 mlp_hidden_dim, bilstm_layers, dropout_alpha, activation, freeze_embedding, lstm_dropout):
         super(KiperwasserDependencyParser, self).__init__()
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.dropout = dropout_alpha
@@ -22,7 +22,7 @@ class KiperwasserDependencyParser(nn.Module):
         self.root_idx = 0
         self.dropout = dropout_alpha
 
-        if pretrained_embedding != None:
+        if pretrained_embedding is not None:
             self.word_embedder = nn.Embedding.from_pretrained(pretrained_embedding, freeze=freeze_embedding)
         else:
             self.word_embedder = nn.Embedding(len(self.word_dict), int(word_embedding_dim))
@@ -36,6 +36,7 @@ class KiperwasserDependencyParser(nn.Module):
         self.encoder = nn.LSTM(input_size=self.emb_dim,
                                hidden_size=self.lstm_hidden_dim,
                                num_layers=bilstm_layers,
+                               dropout=lstm_dropout,
                                bidirectional=True,
                                batch_first=True)
 

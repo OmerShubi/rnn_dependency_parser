@@ -15,7 +15,7 @@ from ax import optimize
 # uncomment for debugging
 # CUDA_LAUNCH_BLOCKING = 1 #
 N_EPOCHS_STOP = 5
-SEARCH_HYPERPARAMS = False
+# TODO
 parameters_basic_model = {"learning_rate": 0.001,
                           "word_embedding_dim": 100,
                           "tag_embedding_dim": 25,
@@ -31,24 +31,23 @@ parameters_basic_model = {"learning_rate": 0.001,
                           "freeze_embedding": False
                           }
 
-parameters_advanced_model = {"learning_rate": 0.002,
-                             "word_embedding_dim": 0,
+parameters_advanced_model = {"optimizer_method": "{'optim': optim.Adam, 'lr': 0.002, 'betas': (0.9, 0.9)}",
                              "tag_embedding_dim": 25,
-                             "accumulate_grad_step": 10,
-                             "optimizer_method": "optim.Adam",
+                             "accumulate_grad_step": 20,
                              "lstm_hidden_dim": 400,
-                             "word_embedding_name_or_size": "glove.840B.300d",
+                             "word_embedding_name_or_size_and_freeze_flag": "('glove.840B.300d', False)",
                              "mlp_hidden_dim": 500,
                              "bilstm_layers": 4,
                              "dropout_alpha": 0.1,
                              "activation": "nn.ReLU",
-                             "min_freq": 2
+                             "min_freq": 2,
+                             "lstm_dropout": 0.0
                              }
 
 
 def optimization_wrapper(args, logger, word_dict, tag_dict, path_train, path_test, params_dict):
 
-    word_embedding_name_or_size, freeze_embedding = params_dict["word_embedding_name_or_size_and_freeze_flag"]
+    word_embedding_name_or_size, freeze_embedding = eval(params_dict["word_embedding_name_or_size_and_freeze_flag"])
 
     # Prep Train Data
     train = DepDataset(word_dict=word_dict,
@@ -81,7 +80,8 @@ def optimization_wrapper(args, logger, word_dict, tag_dict, path_train, path_tes
                                         bilstm_layers=params_dict["bilstm_layers"],
                                         dropout_alpha=params_dict["dropout_alpha"],
                                         activation=params_dict["activation"],
-                                        freeze_embedding=freeze_embedding)
+                                        freeze_embedding=freeze_embedding,
+                                        lstm_dropout=params_dict['lstm_dropout'])
 
     # Determine if have GPU
     use_cuda = torch.cuda.is_available()
@@ -192,6 +192,7 @@ def main():
     parser.add_argument('--comp', action='store_true', default=False)
     parser.add_argument('--total_trails', type=int, default=20)
     parser.add_argument('--debug', action='store_true', default=False)
+    parser.add_argument('--search_hyperparams', action='store_true', default=False)
     args = parser.parse_args()
 
     # Gets or creates a logger
@@ -212,18 +213,17 @@ def main():
     # Create Dictionaries of counts of words and tags from train + test
     # word_dict, tag_dict = get_vocabs([path_train, path_test]) # TODO delete, combine train and test files for competition
     word_dict, tag_dict = get_vocabs([path_train])
-    # TODO GO over choices values
-    # TODO DROPOUT
-    # TODO embedding FREEZE and or / pretrained + not pretrained
+    # TODO mlp DROPOUT
+    # TODO pretrained + not pretrained
     # TODO lowercase
-    if SEARCH_HYPERPARAMS:
+    if args.search_hyperparams:
         best_parameters, best_values, experiment, model = optimize(
             parameters=[
                 {
                     "name": "accumulate_grad_step",
                     "type": "choice",
                     "is_numeric": False,
-                    "values": [2, 4, 5, 10],
+                    "values": [2, 5, 10, 20],
                 },
                 {
                     "name": "optimizer_method",
@@ -248,29 +248,29 @@ def main():
                     "name": "lstm_hidden_dim",
                     "type": "choice",
                     "is_numeric": False,
-                    "values": [125, 200, 300, 0],
+                    "values": [125, 200, 300, 400, 0],
                 },
                 {
                     "name": "word_embedding_name_or_size_and_freeze_flag",
                     "type": "choice",
                     "is_numeric": False,
-                    "values": ["(glove.6B.50d, True)",
-                               "(glove.6B.50d, False)",
-                               "(glove.6B.100d, True)",
-                               "(glove.6B.100d, False)",
-                               "(glove.6B.200d, True)",
-                               "(glove.6B.200d, False)",
-                               "(glove.6B.300d, True)",
-                               "(glove.6B.300d, False)",
-                               "(glove.840B.300d, True)",
-                               "(glove.840B.300d, False)",
-                               "(fasttext.en.300d, True)",
-                               "(fasttext.en.300d, False)",
-                               "(25, False)",
-                               "(50, False)",
-                               "(100, False)",
-                               "(200, False)",
-                               "(300, False)"]
+                    "values": ["('glove.6B.50d', True)",
+                               "('glove.6B.50d', False)",
+                               "('glove.6B.100d', True)",
+                               "('glove.6B.100d', False)",
+                               "('glove.6B.200d', True)",
+                               "('glove.6B.200d', False)",
+                               "('glove.6B.300d', True)",
+                               "('glove.6B.300d', False)",
+                               "('glove.840B.300d', True)",
+                               "('glove.840B.300d', False)",
+                               "('fasttext.en.300d', True)",
+                               "('fasttext.en.300d', False)",
+                               "('25', False)",
+                               "('50', False)",
+                               "('100', False)",
+                               "('200', False)",
+                               "('300', False)"]
                 },
                 {
                     "name": "tag_embedding_dim",
@@ -282,19 +282,25 @@ def main():
                     "name": "mlp_hidden_dim",
                     "type": "choice",
                     "is_numeric": False,
-                    "values": [50, 100, 150],
+                    "values": [50, 100, 200, 300, 400, 500],
                 },
                 {
                     "name": "bilstm_layers",
                     "type": "choice",
                     "is_numeric": False,
-                    "values": [1, 2, 3]
+                    "values": [1, 2, 3, 4]
                 },
                 {
                     "name": "dropout_alpha",
                     "type": "choice",
                     "is_numeric": False,
-                    "values": [0.0, 0.05, 0.1]
+                    "values": [0.0, 0.05, 0.1, 0.25]
+                },
+                {
+                    "name": "lstm_dropout",
+                    "type": "choice",
+                    "is_numeric": False,
+                    "values": [0.0, 0.15, 0.3]
                 },
                 {
                     "name": "activation",
