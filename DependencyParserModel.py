@@ -9,7 +9,7 @@ class KiperwasserDependencyParser(nn.Module):
     # TODO lstm_out_dim use
     def __init__(self, word_dict, tag_dict, word_list, tag_list,
                  tag_embedding_dim, word_embedding_dim, pretrained_embedding, lstm_hidden_dim,
-                 mlp_hidden_dim, bilstm_layers, dropout_alpha, activation):
+                 mlp_hidden_dim, bilstm_layers, dropout_alpha, activation, freeze_embedding):
         super(KiperwasserDependencyParser, self).__init__()
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.dropout = dropout_alpha
@@ -22,11 +22,10 @@ class KiperwasserDependencyParser(nn.Module):
         self.root_idx = 0
         self.dropout = dropout_alpha
 
-
         if pretrained_embedding != None:
-            self.word_embedder = nn.Embedding.from_pretrained(pretrained_embedding, freeze=False)
+            self.word_embedder = nn.Embedding.from_pretrained(pretrained_embedding, freeze=freeze_embedding)
         else:
-            self.word_embedder = nn.Embedding(len(self.word_dict), word_embedding_dim)
+            self.word_embedder = nn.Embedding(len(self.word_dict), int(word_embedding_dim))
 
         self.tag_embedder = nn.Embedding(len(self.tag_dict), tag_embedding_dim)
 

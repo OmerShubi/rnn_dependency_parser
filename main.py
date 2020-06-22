@@ -12,43 +12,59 @@ import numpy as np
 import time
 from ax import optimize
 
-
 # uncomment for debugging
 # CUDA_LAUNCH_BLOCKING = 1 #
 N_EPOCHS_STOP = 5
-
-
+SEARCH_HYPERPARAMS = False
 parameters_basic_model = {"learning_rate": 0.001,
-                "word_embedding_dim": 100,
-                "tag_embedding_dim": 25,
-                "accumulate_grad_step": 5,
-                "optimizer_method": "optim.Adam",
-                "lstm_hidden_dim": 125,
-                "pretrained_embedding" : None,
-                "mlp_hidden_dim": 100,
-                "bilstm_layers": 2,
-                "dropout_alpha": 0.25,
-                "activation": "nn.Tanh",
-                "min_freq": 1
-                }
+                          "word_embedding_dim": 100,
+                          "tag_embedding_dim": 25,
+                          "accumulate_grad_step": 5,
+                          "optimizer_method": "optim.Adam",
+                          "lstm_hidden_dim": 125,
+                          "word_embedding_name_or_size": "",
+                          "mlp_hidden_dim": 100,
+                          "bilstm_layers": 2,
+                          "dropout_alpha": 0.25,
+                          "activation": "nn.Tanh",
+                          "min_freq": 1,
+                          "freeze_embedding": False
+                          }
+
+parameters_advanced_model = {"learning_rate": 0.002,
+                             "word_embedding_dim": 0,
+                             "tag_embedding_dim": 25,
+                             "accumulate_grad_step": 10,
+                             "optimizer_method": "optim.Adam",
+                             "lstm_hidden_dim": 400,
+                             "word_embedding_name_or_size": "glove.840B.300d",
+                             "mlp_hidden_dim": 500,
+                             "bilstm_layers": 4,
+                             "dropout_alpha": 0.1,
+                             "activation": "nn.ReLU",
+                             "min_freq": 2
+                             }
+
 
 def optimization_wrapper(args, logger, word_dict, tag_dict, path_train, path_test, params_dict):
+
+    word_embedding_name_or_size, freeze_embedding = params_dict["word_embedding_name_or_size_and_freeze_flag"]
 
     # Prep Train Data
     train = DepDataset(word_dict=word_dict,
                        tag_dict=tag_dict,
                        file_path=path_train,
-                       pretrained_embedding=params_dict["pretrained_embedding"],
+                       word_embedding_name_or_size=word_embedding_name_or_size,
                        comp=args.comp,
                        min_freq=params_dict["min_freq"])
     train_dataloader = DataLoader(train, shuffle=True)
 
     # Prep Test Data
     test = DepDataset(word_dict=word_dict,
-                       tag_dict=tag_dict,
-                       file_path=path_test,
-                       pretrained_embedding=params_dict["pretrained_embedding"],
-                       comp=args.comp,
+                      tag_dict=tag_dict,
+                      file_path=path_test,
+                      word_embedding_name_or_size=word_embedding_name_or_size,
+                      comp=args.comp,
                       min_freq=params_dict["min_freq"])
     test_dataloader = DataLoader(test, shuffle=False)
 
@@ -58,13 +74,14 @@ def optimization_wrapper(args, logger, word_dict, tag_dict, path_train, path_tes
                                         word_list=train.words_list,
                                         tag_list=train.tags_list,
                                         tag_embedding_dim=params_dict["tag_embedding_dim"],
-                                        word_embedding_dim=params_dict["word_embedding_dim"],
+                                        word_embedding_dim=word_embedding_name_or_size,
                                         pretrained_embedding=train.word_vectors,
                                         lstm_hidden_dim=params_dict["lstm_hidden_dim"],
                                         mlp_hidden_dim=params_dict["mlp_hidden_dim"],
                                         bilstm_layers=params_dict["bilstm_layers"],
                                         dropout_alpha=params_dict["dropout_alpha"],
-                                        activation=params_dict["activation"])
+                                        activation=params_dict["activation"],
+                                        freeze_embedding=freeze_embedding)
 
     # Determine if have GPU
     use_cuda = torch.cuda.is_available()
@@ -74,8 +91,12 @@ def optimization_wrapper(args, logger, word_dict, tag_dict, path_train, path_tes
         logger.debug("using cuda")
         model.cuda()
 
-    optimizer_method = eval(params_dict["optimizer_method"])
-    optimizer = optimizer_method(model.parameters(), lr=params_dict["learning_rate"])
+    optimizer_dict = eval(params_dict["optimizer_method"])
+    try:
+        betas = optimizer_dict['betas']
+        optimizer = optimizer_dict['optim'](model.parameters(), lr=optimizer_dict['lr'], betas=betas)
+    except KeyError:
+        optimizer = optimizer_dict['optim'](model.parameters(), lr=optimizer_dict['lr'])
 
     # Training
 
@@ -118,7 +139,6 @@ def optimization_wrapper(args, logger, word_dict, tag_dict, path_train, path_tes
             if epoch == 1:
                 logger.debug(f"tagging test took {round(time.time() - start_time_test, 2)} seconds")
 
-
             # Statistics for plots
             loss_train_list.append(train_loss)
             loss_test_list.append(test_acc)
@@ -135,7 +155,7 @@ def optimization_wrapper(args, logger, word_dict, tag_dict, path_train, path_tes
             else:
                 epochs_no_improve += 1
             if epochs_no_improve == N_EPOCHS_STOP:
-                logger.debug(f'Early stopping after epoch {epoch}')
+                logger.debug(f'Early stopping after epoch {epoch} with max test acc of {max_test_accur}')
                 break
 
         end_time = datetime.datetime.now().strftime('%d-%m-%H%M')
@@ -149,15 +169,18 @@ def optimization_wrapper(args, logger, word_dict, tag_dict, path_train, path_tes
         # Plot Loss
         create_graph(loss_train_list, loss_test_list, "Loss", end_time)
 
-        logger.debug(f"training took {round(time.time()-start_time,0)} seconds")
+        logger.debug(f"training took {round(time.time() - start_time, 0)} seconds")
 
         # save results in csv
         with open("results/results.csv", 'a') as csv_file:
             writer = csv.writer(csv_file)
             max_accur = max(accuracy_test_list)
-            writer.writerow([args.debug, args.num_epochs,np.argmax(np.array(accuracy_test_list)), max_accur, args.msg, end_time]+
-                            list(params_dict.values()))
+            writer.writerow(
+                [args.debug, args.num_epochs, np.argmax(np.array(accuracy_test_list)) + 1, max_accur, args.msg,
+                 end_time] +
+                list(params_dict.values()))
         return max_accur
+
 
 def main():
     parser = ArgumentParser()
@@ -166,11 +189,10 @@ def main():
                         default="models/model1.pth")
     parser.add_argument('--num_epochs', type=int, default=30)
     parser.add_argument('--msg', help='msg to write in log file', type=str, default='')
-    parser.add_argument('--comp',  action='store_true', default=False)
-    parser.add_argument('--total_trails',  type=int, default=20)
+    parser.add_argument('--comp', action='store_true', default=False)
+    parser.add_argument('--total_trails', type=int, default=20)
     parser.add_argument('--debug', action='store_true', default=False)
     args = parser.parse_args()
-
 
     # Gets or creates a logger
     logging.config.fileConfig('logging.conf')
@@ -190,94 +212,114 @@ def main():
     # Create Dictionaries of counts of words and tags from train + test
     # word_dict, tag_dict = get_vocabs([path_train, path_test]) # TODO delete, combine train and test files for competition
     word_dict, tag_dict = get_vocabs([path_train])
+    # TODO GO over choices values
+    # TODO DROPOUT
+    # TODO embedding FREEZE and or / pretrained + not pretrained
+    # TODO lowercase
+    if SEARCH_HYPERPARAMS:
+        best_parameters, best_values, experiment, model = optimize(
+            parameters=[
+                {
+                    "name": "accumulate_grad_step",
+                    "type": "choice",
+                    "is_numeric": False,
+                    "values": [2, 4, 5, 10],
+                },
+                {
+                    "name": "optimizer_method",
+                    "type": "choice",
+                    "is_numeric": False,
+                    "values": ["{'optim':optim.Adam, 'lr':0.001, 'betas':(0.9, 0.999)}",
+                               "{'optim':optim.Adam, 'lr':0.01, 'betas':(0.9, 0.9)}",
+                               "{'optim':optim.Adam, 'lr':0.001, 'betas':(0.9, 0.9)}",
+                               "{'optim':optim.Adam, 'lr':0.0005, 'betas':(0.9, 0.9)}",
+                               "{'optim':optim.SGD, 'lr':0.01}",
+                               "{'optim':optim.SGD, 'lr':0.1}",
+                               "{'optim':optim.SGD, 'lr':0.001}",
+                               "{'optim':optim.SGD, 'lr':1.0}",
+                               "{'optim':optim.AdamW, 'lr':0.001, 'betas':(0.9, 0.999)}",
+                               "{'optim':optim.AdamW, 'lr':0.002, 'betas':(0.9, 0.9)}",
+                               "{'optim':optim.AdamW, 'lr':0.0005, 'betas':(0.9, 0.9)}",
+                               "{'optim':optim.AdamW, 'lr':0.001, 'betas':(0.9, 0.9)}",
+                               "{'optim':optim.Adadelta, 'lr':1}",
+                               "{'optim':optim.Adadelta, 'lr':2}"],
+                },
+                {
+                    "name": "lstm_hidden_dim",
+                    "type": "choice",
+                    "is_numeric": False,
+                    "values": [125, 200, 300, 0],
+                },
+                {
+                    "name": "word_embedding_name_or_size_and_freeze_flag",
+                    "type": "choice",
+                    "is_numeric": False,
+                    "values": ["(glove.6B.50d, True)",
+                               "(glove.6B.50d, False)",
+                               "(glove.6B.100d, True)",
+                               "(glove.6B.100d, False)",
+                               "(glove.6B.200d, True)",
+                               "(glove.6B.200d, False)",
+                               "(glove.6B.300d, True)",
+                               "(glove.6B.300d, False)",
+                               "(glove.840B.300d, True)",
+                               "(glove.840B.300d, False)",
+                               "(fasttext.en.300d, True)",
+                               "(fasttext.en.300d, False)",
+                               "(25, False)",
+                               "(50, False)",
+                               "(100, False)",
+                               "(200, False)",
+                               "(300, False)"]
+                },
+                {
+                    "name": "tag_embedding_dim",
+                    "type": "choice",
+                    "is_numeric": False,
+                    "values": [5, 10, 25, 50],
+                },
+                {
+                    "name": "mlp_hidden_dim",
+                    "type": "choice",
+                    "is_numeric": False,
+                    "values": [50, 100, 150],
+                },
+                {
+                    "name": "bilstm_layers",
+                    "type": "choice",
+                    "is_numeric": False,
+                    "values": [1, 2, 3]
+                },
+                {
+                    "name": "dropout_alpha",
+                    "type": "choice",
+                    "is_numeric": False,
+                    "values": [0.0, 0.05, 0.1]
+                },
+                {
+                    "name": "activation",
+                    "type": "choice",
+                    "is_numeric": False,
+                    "values": ["nn.Tanh", "nn.ReLU", "nn.Sigmoid", "nn.LeakyReLU"]
+                },
+                {
+                    "name": "min_freq",
+                    "type": "choice",
+                    "is_numeric": False,
+                    "values": [1, 2, 3, 5]
+                },
+            ],
+            evaluation_function=lambda p: optimization_wrapper(args, logger, word_dict, tag_dict, path_train, path_test,
+                                                               p),
+            minimize=False,
+            total_trials=args.total_trails,
+            objective_name="UAS accuracy",
+        )
 
-    # optimization_wrapper(args, logger, word_dict, tag_dict, path_train, path_test)
+        logger.debug(f"{best_parameters},{best_values[0]}")
+    else:
+        optimization_wrapper(args, logger, word_dict, tag_dict, path_train, path_test, parameters_advanced_model)
 
-    best_parameters, best_values, experiment, model = optimize(
-        parameters=[
-            {
-                "name": "learning_rate",
-                "type": "choice",
-                "is_numeric": False,
-                "values": [0.001, 0.002, 0.01, 0.02, 0.05, 1.0],
-            },
-            {
-                "name": "word_embedding_dim",
-                "type": "choice",
-                "is_numeric": False,
-                "values": [25, 50, 100, 200, 300, 0],
-            },
-            {
-                "name": "tag_embedding_dim",
-                "type": "choice",
-                "is_numeric": False,
-                "values": [5, 10, 25, 50],
-            },
-            {
-                "name": "accumulate_grad_step",
-                "type": "choice",
-                "is_numeric": False,
-                "values": [2, 4, 5, 10],
-            },
-            {
-                "name": "optimizer_method",
-                "type": "choice",
-                "is_numeric": False,
-                "values": ["optim.Adam", "optim.SGD", "optim.AdamW", "optim.Adadelta"],
-            },
-            {
-                "name": "lstm_hidden_dim",
-                "type": "choice",
-                "is_numeric": False,
-                "values": [125, 200, 300, 0],
-            },
-            {
-                "name": "pretrained_embedding",
-                "type": "choice",
-                "is_numeric": False,
-                "values": ["glove.6B.50d", "glove.6B.100d", "glove.6B.200d", "glove.6B.300d",
-                           "glove.840B.300d", "fasttext.en.300d", ""]
-            },
-            {
-                "name": "mlp_hidden_dim",
-                "type": "choice",
-                "is_numeric": False,
-                "values": [50, 100, 150],
-            },
-            {
-                "name": "bilstm_layers",
-                "type": "choice",
-                "is_numeric": False,
-                "values": [1, 2, 3]
-            },
-            {
-                "name": "dropout_alpha",
-                "type": "choice",
-                "is_numeric": False,
-                "values": [0.0, 0.05, 0.1]
-            },
-            {
-                "name": "activation",
-                "type": "choice",
-                "is_numeric": False,
-                "values": ["nn.Tanh", "nn.ReLU", "nn.Sigmoid", "nn.LeakyReLU"]
-            },
-            {
-                "name": "min_freq",
-                "type": "choice",
-                "is_numeric": False,
-                "values": [1, 2, 3, 5]
-            },
-        ],
-        evaluation_function=lambda p : optimization_wrapper(args, logger, word_dict, tag_dict, path_train, path_test, p),
-        minimize=False,
-        total_trials=args.total_trails,
-        objective_name="UAS accuracy",
-        parameter_constraints=["(pretrained_embedding and (word_embedding_dim == 0)) or"
-                               " ((pretrained_embedding == '') and (word_embedding_dim != 0))"]
-    )
-
-    logger.debug(f"{best_parameters},{best_values[0]}")
 
 if __name__ == "__main__":
     main()
