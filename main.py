@@ -10,11 +10,11 @@ from argparse import ArgumentParser
 import csv
 import numpy as np
 import time
-from ax import optimize
+from ax import optimize #TODO
 
 # uncomment for debugging
 # CUDA_LAUNCH_BLOCKING = 1 #
-N_EPOCHS_STOP = 10
+
 # TODO
 parameters_basic_model = {"learning_rate": 0.001,
                           "word_embedding_dim": 100,
@@ -46,11 +46,18 @@ parameters_advanced_model = {"accumulate_grad_step": 15,
                              }
 
 
-def optimization_wrapper(args, logger, word_dict, tag_dict, path_train, path_test, params_dict):
+def optimization_wrapper(args, logger, path_train, path_test, params_dict):
 
     logger.debug(f"Using params:{params_dict.items()}")
 
     word_embedding_name_or_size, freeze_embedding = eval(params_dict["word_embedding_name_or_size_and_freeze_flag"])
+
+    lower_case = False if word_embedding_name_or_size == 'glove.840B.300d' else True
+
+    # Data Preprocessing
+    # Create Dictionaries of counts of words and tags from train + test
+    # word_dict, tag_dict = get_vocabs([path_train, path_test]) # TODO delete, combine train and test files for competition
+    word_dict, tag_dict = get_vocabs([path_train], lower_case)
 
     # Prep Train Data
     train = DepDataset(word_dict=word_dict,
@@ -58,7 +65,8 @@ def optimization_wrapper(args, logger, word_dict, tag_dict, path_train, path_tes
                        file_path=path_train,
                        word_embedding_name_or_size=word_embedding_name_or_size,
                        comp=args.comp,
-                       min_freq=params_dict["min_freq"])
+                       min_freq=params_dict["min_freq"],
+                       lower_case=lower_case)
     train_dataloader = DataLoader(train, shuffle=True)
 
     # Prep Test Data
@@ -67,7 +75,8 @@ def optimization_wrapper(args, logger, word_dict, tag_dict, path_train, path_tes
                       file_path=path_test,
                       word_embedding_name_or_size=word_embedding_name_or_size,
                       comp=args.comp,
-                      min_freq=params_dict["min_freq"])
+                      min_freq=1,
+                      lower_case=lower_case)
     test_dataloader = DataLoader(test, shuffle=False)
 
     # Dependency Parser Model
@@ -117,14 +126,13 @@ def optimization_wrapper(args, logger, word_dict, tag_dict, path_train, path_tes
 
     else:
         logger.debug("Training Started")
+
         start_time = time.time()
         start_time_printable = datetime.datetime.now().strftime('%d-%m-%H%M')
-        accuracy_train_list = []
-        loss_train_list = []
-        loss_test_list = []
-        accuracy_test_list = []
-        max_test_accur = -1
-        prev_test_acc = -1
+
+        accuracy_train_list, loss_train_list, loss_test_list , accuracy_test_list = [], [], [], []
+        max_test_acc, prev_test_acc = -1, -1
+
         for epoch in range(1, args.num_epochs + 1):
             # Forward + Backward on train
             train_acc, train_loss = run_and_evaluate(model,
@@ -156,11 +164,11 @@ def optimization_wrapper(args, logger, word_dict, tag_dict, path_train, path_tes
                          f"Curr Test Accuracy: {test_acc}\n")
 
             # Store the best modek
-            if test_acc > max_test_accur:
-                max_test_accur = test_acc
+            if test_acc > max_test_acc:
+                max_test_acc = test_acc
 
                 # Save model # TODO
-                torch.save(model, f"models/model1_{start_time_printable}_{round(max_test_accur,4)}.pth")
+                torch.save(model, f"models/model1_{start_time_printable}_{round(max_test_acc,4)}.pth")
 
             if test_acc > prev_test_acc:
                 epochs_no_improve = 0
@@ -169,8 +177,8 @@ def optimization_wrapper(args, logger, word_dict, tag_dict, path_train, path_tes
 
             prev_test_acc = test_acc
 
-            if epochs_no_improve == N_EPOCHS_STOP:
-                logger.debug(f'Early stopping after epoch {epoch} with max test acc of {max_test_accur}')
+            if epochs_no_improve == args.n_epochs_stop:
+                logger.debug(f'Early stopping after epoch {epoch} with max test acc of {max_test_acc}')
                 break
 
         end_time = datetime.datetime.now().strftime('%d-%m-%H%M')
@@ -210,6 +218,7 @@ def main():
                         default="models/model1.pth")
     parser.add_argument('--num_epochs', type=int, default=25)
     parser.add_argument('--msg', help='msg to write in log file', type=str, default='')
+    parser.add_argument('--n_epochs_stop', help='early stopping in training', type=int, default=10)
     parser.add_argument('--comp', action='store_true', default=False)
     parser.add_argument('--total_trails', type=int, default=70)
     parser.add_argument('--debug', action='store_true', default=False)
@@ -230,10 +239,7 @@ def main():
         path_test = data_dir + "test.labeled"
     logger.debug(f"Starting train: {path_train} test:{path_test}")
 
-    # Data Preprocessing
-    # Create Dictionaries of counts of words and tags from train + test
-    # word_dict, tag_dict = get_vocabs([path_train, path_test]) # TODO delete, combine train and test files for competition
-    word_dict, tag_dict = get_vocabs([path_train])
+
     if args.search_hyperparams:
         best_parameters, best_values, experiment, model = optimize(
             parameters=[
@@ -294,7 +300,7 @@ def main():
                     "name": "tag_embedding_dim",
                     "type": "choice",
                     "is_numeric": False,
-                    "values": [5, 10, 25, 50],
+                    "values": [5, 10, 25, 50, 150],
                 },
                 {
                     "name": "mlp_hidden_dim",
@@ -339,8 +345,7 @@ def main():
                     "values": [0.0, 0.15, 0.3]
                 },
             ],
-            evaluation_function=lambda p: optimization_wrapper(args, logger, word_dict, tag_dict, path_train, path_test,
-                                                               p),
+            evaluation_function=lambda p: optimization_wrapper(args, logger, path_train, path_test, p),
             minimize=False,
             total_trials=args.total_trails,
             objective_name="UAS accuracy",
@@ -348,7 +353,7 @@ def main():
 
         logger.debug(f"{best_parameters},{best_values[0]}")
     else:
-        optimization_wrapper(args, logger, word_dict, tag_dict, path_train, path_test, parameters_advanced_model)
+        optimization_wrapper(args, logger, path_train, path_test, parameters_advanced_model)
 
 
 if __name__ == "__main__":
