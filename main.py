@@ -14,7 +14,7 @@ from ax import optimize
 
 # uncomment for debugging
 # CUDA_LAUNCH_BLOCKING = 1 #
-N_EPOCHS_STOP = 500
+N_EPOCHS_STOP = 10
 # TODO
 parameters_basic_model = {"learning_rate": 0.001,
                           "word_embedding_dim": 100,
@@ -118,11 +118,13 @@ def optimization_wrapper(args, logger, word_dict, tag_dict, path_train, path_tes
     else:
         logger.debug("Training Started")
         start_time = time.time()
+        start_time_printable = datetime.datetime.now().strftime('%d-%m-%H%M')
         accuracy_train_list = []
         loss_train_list = []
         loss_test_list = []
         accuracy_test_list = []
         max_test_accur = -1
+        prev_test_acc = -1
         for epoch in range(1, args.num_epochs + 1):
             # Forward + Backward on train
             train_acc, train_loss = run_and_evaluate(model,
@@ -153,11 +155,20 @@ def optimization_wrapper(args, logger, word_dict, tag_dict, path_train, path_tes
                          f"Curr Train Accuracy: {train_acc}\t Curr Test Loss: {test_loss}\t"
                          f"Curr Test Accuracy: {test_acc}\n")
 
+            # Store the best modek
             if test_acc > max_test_accur:
-                epochs_no_improve = 0
                 max_test_accur = test_acc
+
+                # Save model # TODO
+                torch.save(model, f"models/model1_{start_time_printable}_{round(max_test_accur,4)}.pth")
+
+            if test_acc > prev_test_acc:
+                epochs_no_improve = 0
             else:
                 epochs_no_improve += 1
+
+            prev_test_acc = test_acc
+
             if epochs_no_improve == N_EPOCHS_STOP:
                 logger.debug(f'Early stopping after epoch {epoch} with max test acc of {max_test_accur}')
                 break
@@ -176,14 +187,20 @@ def optimization_wrapper(args, logger, word_dict, tag_dict, path_train, path_tes
         logger.debug(f"training took {round(time.time() - start_time, 0)} seconds")
 
         # save results in csv
-        with open("results/results.csv", 'a') as csv_file:
-            writer = csv.writer(csv_file)
-            max_accur = max(accuracy_test_list)
-            writer.writerow(
-                [args.debug, args.num_epochs, np.argmax(np.array(accuracy_test_list)) + 1, max_accur, args.msg,
-                 end_time] +
-                list(params_dict.values()))
-        return max_accur
+        write_results(accuracy_test_list, args, params_dict, start_time_printable)
+
+        return max(accuracy_test_list)
+
+
+def write_results(accuracy_test_list, args, params_dict, start_time_printable):
+    # save results in csv
+    with open("results/results.csv", 'a') as csv_file:
+        writer = csv.writer(csv_file)
+        max_accur = max(accuracy_test_list)
+        writer.writerow(
+            [args.debug, args.num_epochs, np.argmax(np.array(accuracy_test_list)) + 1, max_accur, args.msg,
+             start_time_printable] +
+            list(params_dict.values()))
 
 
 def main():
