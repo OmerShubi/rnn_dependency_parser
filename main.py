@@ -14,7 +14,7 @@ from ax import optimize
 
 # uncomment for debugging
 # CUDA_LAUNCH_BLOCKING = 1 #
-N_EPOCHS_STOP = 5
+N_EPOCHS_STOP = 500
 # TODO
 parameters_basic_model = {"learning_rate": 0.001,
                           "word_embedding_dim": 100,
@@ -31,21 +31,23 @@ parameters_basic_model = {"learning_rate": 0.001,
                           "freeze_embedding": False
                           }
 
-parameters_advanced_model = {"optimizer_method": "{'optim': optim.Adam, 'lr': 0.002, 'betas': (0.9, 0.9)}",
-                             "tag_embedding_dim": 25,
-                             "accumulate_grad_step": 20,
-                             "lstm_hidden_dim": 400,
-                             "word_embedding_name_or_size_and_freeze_flag": "('glove.840B.300d', False)",
+parameters_advanced_model = {"accumulate_grad_step": 20,
+                             "optimizer_method": "{'optim': optim.Adadelta, 'lr': 1.0}",
+                             "lstm_hidden_dim": 0,
+                             "word_embedding_name_or_size_and_freeze_flag": "('glove.840B.300d', True)",
+                             "tag_embedding_dim": 50,
                              "mlp_hidden_dim": 500,
-                             "bilstm_layers": 4,
+                             "bilstm_layers": 3,
                              "dropout_alpha": 0.1,
+                             "lstm_dropout": 0.0,
                              "activation": "nn.ReLU",
-                             "min_freq": 2,
-                             "lstm_dropout": 0.0
+                             "min_freq": 3,
                              }
 
 
 def optimization_wrapper(args, logger, word_dict, tag_dict, path_train, path_test, params_dict):
+
+    logger.debug(f"Using params:{params_dict.items()}")
 
     word_embedding_name_or_size, freeze_embedding = eval(params_dict["word_embedding_name_or_size_and_freeze_flag"])
 
@@ -187,10 +189,10 @@ def main():
     parser.add_argument('--skip_train', help='if skip train', action='store_true', default=False)
     parser.add_argument('--model_path', help='if skip train - path model to load', type=str,
                         default="models/model1.pth")
-    parser.add_argument('--num_epochs', type=int, default=30)
+    parser.add_argument('--num_epochs', type=int, default=25)
     parser.add_argument('--msg', help='msg to write in log file', type=str, default='')
     parser.add_argument('--comp', action='store_true', default=False)
-    parser.add_argument('--total_trails', type=int, default=20)
+    parser.add_argument('--total_trails', type=int, default=70)
     parser.add_argument('--debug', action='store_true', default=False)
     parser.add_argument('--search_hyperparams', action='store_true', default=False)
     args = parser.parse_args()
@@ -213,9 +215,6 @@ def main():
     # Create Dictionaries of counts of words and tags from train + test
     # word_dict, tag_dict = get_vocabs([path_train, path_test]) # TODO delete, combine train and test files for competition
     word_dict, tag_dict = get_vocabs([path_train])
-    # TODO mlp DROPOUT
-    # TODO pretrained + not pretrained
-    # TODO lowercase
     if args.search_hyperparams:
         best_parameters, best_values, experiment, model = optimize(
             parameters=[
