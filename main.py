@@ -31,17 +31,18 @@ parameters_basic_model = {"learning_rate": 0.001,
                           "freeze_embedding": False
                           }
 
-parameters_advanced_model = {"accumulate_grad_step": 20,
-                             "optimizer_method": "{'optim': optim.Adadelta, 'lr': 1.0}",
+parameters_advanced_model = {"accumulate_grad_step": 15,
+                             "optimizer_method": "{'optim': optim.Adam, 'lr': 0.003}",
                              "lstm_hidden_dim": 0,
-                             "word_embedding_name_or_size_and_freeze_flag": "('glove.840B.300d', True)",
-                             "tag_embedding_dim": 50,
-                             "mlp_hidden_dim": 500,
+                             "word_embedding_name_or_size_and_freeze_flag": "('100', False)",
+                             "tag_embedding_dim": 25,
+                             "mlp_hidden_dim": 150,
                              "bilstm_layers": 3,
                              "dropout_alpha": 0.1,
                              "lstm_dropout": 0.0,
                              "activation": "nn.ReLU",
-                             "min_freq": 3,
+                             "min_freq": 1,
+                             'mlp_dropout': 0.3,
                              }
 
 
@@ -83,7 +84,8 @@ def optimization_wrapper(args, logger, word_dict, tag_dict, path_train, path_tes
                                         dropout_alpha=params_dict["dropout_alpha"],
                                         activation=params_dict["activation"],
                                         freeze_embedding=freeze_embedding,
-                                        lstm_dropout=params_dict['lstm_dropout'])
+                                        lstm_dropout=params_dict['lstm_dropout'],
+                                        mlp_dropout=params_dict['mlp_dropout'])
 
     # Determine if have GPU
     use_cuda = torch.cuda.is_available()
@@ -312,6 +314,12 @@ def main():
                     "type": "choice",
                     "is_numeric": False,
                     "values": [1, 2, 3, 5]
+                },
+                {
+                    "name": "mlp_dropout",
+                    "type": "choice",
+                    "is_numeric": False,
+                    "values": [0.0, 0.15, 0.3]
                 },
             ],
             evaluation_function=lambda p: optimization_wrapper(args, logger, word_dict, tag_dict, path_train, path_test,

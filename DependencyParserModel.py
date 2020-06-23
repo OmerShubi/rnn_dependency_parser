@@ -9,7 +9,7 @@ class KiperwasserDependencyParser(nn.Module):
     # TODO lstm_out_dim use
     def __init__(self, word_dict, tag_dict, word_list, tag_list,
                  tag_embedding_dim, word_embedding_dim, pretrained_embedding, lstm_hidden_dim,
-                 mlp_hidden_dim, bilstm_layers, dropout_alpha, activation, freeze_embedding, lstm_dropout):
+                 mlp_hidden_dim, bilstm_layers, dropout_alpha, activation, freeze_embedding, lstm_dropout, mlp_dropout):
         super(KiperwasserDependencyParser, self).__init__()
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.dropout = dropout_alpha
@@ -41,11 +41,12 @@ class KiperwasserDependencyParser(nn.Module):
                                batch_first=True)
 
         # input samples dim for MLP is lstm_out_dim=lstm_hidden_dim*NUM_DIRECTION
-        self.edge_scorer = MLP(self.lstm_hidden_dim * 2, mlp_hidden_dim, activation)
+        self.mlp_edge_scorer = MLP(self.lstm_hidden_dim * 2, mlp_hidden_dim, activation, mlp_dropout=mlp_dropout)
 
         self.decoder = decode_mst  # This is used to produce the maximum spannning tree during inference
 
         self.log_soft_max = nn.LogSoftmax(dim=0)
+
 
     def forward(self, sentence):
         loss, predicted_tree = self.infer(sentence)
@@ -79,7 +80,7 @@ class KiperwasserDependencyParser(nn.Module):
             lstm_output, _ = self.encoder(input_embeddings.view(1, input_embeddings.shape[1], -1))
 
             # Get score for each possible edge in the parsing graph, construct score matrix
-            scores = self.edge_scorer(lstm_output)
+            scores = self.mlp_edge_scorer(lstm_output)
 
             # Use Chu-Liu-Edmonds to get the predicted parse tree T' given the calculated score matrix
             seq_len = lstm_output.size(1)

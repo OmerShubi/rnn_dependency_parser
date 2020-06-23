@@ -17,6 +17,10 @@ def run_and_evaluate(model, dataloader, accumulate_grad_steps=None, optimizer=No
     i = 0
     # torch.no_grad - temp covert all grad flags to False
     cm = torch.no_grad() if is_test else nullcontext()
+    if is_test:
+        model.eval()
+    else:
+        model.train()
     with cm:
         for batch_idx, input_data in enumerate(tqdm.tqdm(dataloader)):
             loss, predicted_tree_heads = model(tuple(input_data))
