@@ -23,6 +23,7 @@ class KiperwasserDependencyParser(nn.Module):
         self.unknown_tag_idx = 1
         self.root_idx = 0
         self.dropout = dropout_alpha
+        self.word_embedding_dim = word_embedding_dim
 
         if pretrained_embedding is not None:
             self.word_embedder = nn.Embedding.from_pretrained(pretrained_embedding, freeze=freeze_embedding)

@@ -15,21 +15,19 @@ from ax import optimize #TODO
 # uncomment for debugging
 # CUDA_LAUNCH_BLOCKING = 1 #
 
-# TODO
-parameters_basic_model = {"learning_rate": 0.001,
-                          "word_embedding_dim": 100,
+parameters_basic_model = {"accumulate_grad_step": 5,
+                          "optimizer_method": "{'optim': optim.Adam, 'lr': 0.001}",
+                          "lstm_hidden_dim": 0,
+                          "word_embedding_name_or_size_and_freeze_flag": "('100', False)",
                           "tag_embedding_dim": 25,
-                          "accumulate_grad_step": 5,
-                          "optimizer_method": "optim.Adam",
-                          "lstm_hidden_dim": 125,
-                          "word_embedding_name_or_size": "",
                           "mlp_hidden_dim": 100,
                           "bilstm_layers": 2,
                           "dropout_alpha": 0.25,
+                          "lstm_dropout": 0.0,
                           "activation": "nn.Tanh",
                           "min_freq": 1,
-                          "freeze_embedding": False
-                          }
+                          'mlp_dropout': 0.0,
+                          } # Todo lowercase flag
 
 parameters_advanced_model = {"accumulate_grad_step": 15,
                              "optimizer_method": "{'optim': optim.Adam, 'lr': 0.003}",
@@ -46,13 +44,13 @@ parameters_advanced_model = {"accumulate_grad_step": 15,
                              }
 
 
-def optimization_wrapper(args, logger, path_train, path_test, params_dict):
+def optimization_wrapper(args, logger, path_train, path_test, params_dict, lower_case_flag=True):
 
     logger.debug(f"Using params:{params_dict.items()}")
 
     word_embedding_name_or_size, freeze_embedding = eval(params_dict["word_embedding_name_or_size_and_freeze_flag"])
 
-    lower_case = False if word_embedding_name_or_size == 'glove.840B.300d' else True
+    lower_case = False if word_embedding_name_or_size == 'glove.840B.300d' else lower_case_flag
 
     # Data Preprocessing
     # Create Dictionaries of counts of words and tags from train + test
@@ -212,6 +210,7 @@ def write_results(accuracy_test_list, args, params_dict, start_time_printable):
 
 
 def main():
+    # TODO model 1 numexpochs 30, model 2 - maxxxx
     parser = ArgumentParser()
     parser.add_argument('--skip_train', help='if skip train', action='store_true', default=False)
     parser.add_argument('--model_path', help='if skip train - path model to load', type=str,
@@ -238,7 +237,6 @@ def main():
         path_train = data_dir + "train.labeled"
         path_test = data_dir + "test.labeled"
     logger.debug(f"Starting train: {path_train} test:{path_test}")
-
 
     if args.search_hyperparams:
         best_parameters, best_values, experiment, model = optimize(
