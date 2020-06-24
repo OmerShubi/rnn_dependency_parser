@@ -47,18 +47,18 @@ class KiperwasserDependencyParser(nn.Module):
 
         self.log_soft_max = nn.LogSoftmax(dim=0)
 
-
     def forward(self, sentence):
         loss, predicted_tree = self.infer(sentence)
 
         return loss, predicted_tree
 
-    def infer(self, sentence, is_comp=False):
+    def infer(self, sentence, is_test=False, is_comp=False):
         cm = torch.no_grad() if is_comp else nullcontext()
+
         with cm:
             word_idx_tensor, tag_idx_tensor, true_tree_heads = sentence
 
-            if self.dropout:
+            if self.dropout and not is_test:
                 for i, word in enumerate(word_idx_tensor[0]):
                     actual_word_idx = word.item()
                     if actual_word_idx != self.unknown_word_idx and actual_word_idx != self.root_idx:

@@ -184,15 +184,15 @@ def optimization_wrapper(args, logger, path_train, path_test, params_dict):
         end_time = datetime.datetime.now().strftime('%d-%m-%H%M')
 
         # Save model
-        torch.save(model, f"models/model1_{end_time}.pth")
+        torch.save(model, f"models/model1_{start_time_printable}.pth")
 
         # Plot Accuracy
-        create_graph(accuracy_train_list, accuracy_test_list, "Accuracy", end_time)
+        create_graph(accuracy_train_list, accuracy_test_list, "Accuracy", start_time_printable)
 
         # Plot Loss
-        create_graph(loss_train_list, loss_test_list, "Loss", end_time)
+        create_graph(loss_train_list, loss_test_list, "Loss", start_time_printable)
 
-        logger.debug(f"training took {round(time.time() - start_time, 0)} seconds")
+        logger.debug(f"training took {round(time.time() - start_time, 0)} seconds with max test acc of {max_test_acc}")
 
         # save results in csv
         write_results(accuracy_test_list, args, params_dict, start_time_printable)
@@ -216,7 +216,7 @@ def main():
     parser.add_argument('--skip_train', help='if skip train', action='store_true', default=False)
     parser.add_argument('--model_path', help='if skip train - path model to load', type=str,
                         default="models/model1.pth")
-    parser.add_argument('--num_epochs', type=int, default=25)
+    parser.add_argument('--num_epochs', type=int, default=30)
     parser.add_argument('--msg', help='msg to write in log file', type=str, default='')
     parser.add_argument('--n_epochs_stop', help='early stopping in training', type=int, default=10)
     parser.add_argument('--comp', action='store_true', default=False)

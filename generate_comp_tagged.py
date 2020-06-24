@@ -24,7 +24,7 @@ def main():
 def comp_infer(model, comp_dataloader):
     sentences = comp_dataloader.dataset.sentences_dataset
     for batch_idx, input_data in enumerate(tqdm.tqdm(comp_dataloader)):
-        predicted_tree_heads = model.infer(tuple(input_data), is_comp=True)
+        predicted_tree_heads = model.infer(tuple(input_data), is_test=True, is_comp=True)
         sentences[batch_idx] = input_data[0], input_data[1], predicted_tree_heads
     return sentences
 
