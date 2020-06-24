@@ -13,6 +13,8 @@ class KiperwasserDependencyParser(nn.Module):
         super(KiperwasserDependencyParser, self).__init__()
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.dropout = dropout_alpha
+        # this is the word and tag dicts from the data that the model trained on.
+        # Used for inference
         self.word_dict = word_dict
         self.tag_dict = tag_dict
         self.tag_list = tag_list
@@ -25,9 +27,9 @@ class KiperwasserDependencyParser(nn.Module):
         if pretrained_embedding is not None:
             self.word_embedder = nn.Embedding.from_pretrained(pretrained_embedding, freeze=freeze_embedding)
         else:
-            self.word_embedder = nn.Embedding(len(self.word_dict), int(word_embedding_dim))
+            self.word_embedder = nn.Embedding(len(self.word_list), int(word_embedding_dim))
 
-        self.tag_embedder = nn.Embedding(len(self.tag_dict), tag_embedding_dim)
+        self.tag_embedder = nn.Embedding(len(self.tag_list), tag_embedding_dim)
 
         self.emb_dim = self.word_embedder.embedding_dim + self.tag_embedder.embedding_dim
 
@@ -67,7 +69,6 @@ class KiperwasserDependencyParser(nn.Module):
                         if random.random() < prob_word:
                             word_idx_tensor[0, i] = self.unknown_word_idx
                             tag_idx_tensor[0, i] = self.unknown_tag_idx
-
 
             # Pass word_idx and tag_idx through their embedding layers
             tag_embbedings = self.tag_embedder(tag_idx_tensor.to(self.device))

@@ -10,7 +10,7 @@ def main():
     path_model1 = "models/model1.pth"
     # path_model2 = "models/model2.pth"
     model = load(path_model1)
-    word_dict, tag_dict = model.word_dict, model.tag_dict
+    word_dict, tag_dict = model.word_dict, model.tag_dict # TODO maybe use word_to_index_dict
     path_comp = "Data/comp.unlabeled"
     tagged_path_comp = "comp_m_206348187.labeled" # TODO change name by req
     comp = DepDataset(word_dict,

@@ -39,8 +39,8 @@ class DepDataReader:
     # TODO comp use
     def __init__(self, file, word_dict, tag_dict, word_to_idx_dict, tag_to_idx_dict, comp=False, lower_case=True):
         self.file = file
-        self.word_dict = word_dict
-        self.tag_dict = tag_dict
+        self.word_dict = word_dict # TODO not in use
+        self.tag_dict = tag_dict # TODO not in use
         self.sentences = []
         self.word_to_idx_dict = word_to_idx_dict
         self.tag_to_idx_dict = tag_to_idx_dict
