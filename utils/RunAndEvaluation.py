@@ -7,12 +7,15 @@ import matplotlib
 import matplotlib.pyplot as plt
 from contextlib import nullcontext
 import seaborn as sns
+from torch.utils.tensorboard import SummaryWriter
+
+from DependencyParserModel import KiperwasserDependencyParser
 
 matplotlib.use('Agg')
 
 
 # TODO generate comp loss
-def run_and_evaluate(model, dataloader, accumulate_grad_steps=None, optimizer=None, is_test=False):
+def run_and_evaluate(model, dataloader, epoch=1, accumulate_grad_steps=None, optimizer=None, is_test=False, ):
     total_acc, total_loss = 0, 0
     i = 0
     # torch.no_grad - temp covert all grad flags to False
@@ -22,9 +25,16 @@ def run_and_evaluate(model, dataloader, accumulate_grad_steps=None, optimizer=No
     else:
         model.train()
     with cm:
+        writer_ = SummaryWriter('runs/bilstm')
 
         for batch_idx, input_data in enumerate(tqdm.tqdm(dataloader)):
-            loss, predicted_tree_heads = model.infer(tuple(input_data), is_test=is_test)
+            scores = model.infer(tuple(input_data), is_test=is_test)
+
+            true_tree_heads = input_data[2].squeeze(0)
+            # Calculate the negative log likelihood loss described above
+            probs_logged = model.log_soft_max(scores)
+            loss = KiperwasserDependencyParser.nll_loss(probs_logged, true_tree_heads, model.device)
+
             if not is_test:
                 i += 1
                 loss = loss / accumulate_grad_steps
@@ -33,9 +43,14 @@ def run_and_evaluate(model, dataloader, accumulate_grad_steps=None, optimizer=No
                     optimizer.step()  # updates params
                     model.zero_grad()
 
-            total_acc += num_of_correct_one_sen(predicted_tree_heads, input_data[2])  # input_data[2] = true_heads
+            # total_acc += num_of_correct_one_sen(predicted_tree_heads, input_data[2])  # input_data[2] = true_heads
             total_loss += loss.item()
 
+        writer_.add_scalar('train/loss', total_loss, epoch)
+        for batch_idx, input_data in enumerate(tqdm.tqdm(dataloader)):
+            writer_.add_graph(model, (input_data,))
+
+        writer_.flush()
         total_acc = total_acc / dataloader.dataset.num_edges
         total_loss = total_loss / len(dataloader)
 

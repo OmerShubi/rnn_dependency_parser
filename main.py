@@ -32,18 +32,18 @@ parameters_basic_model = {"learning_rate": 0.001,
                           "freeze_embedding": False
                           }
 
-parameters_advanced_model = {"accumulate_grad_step": 15,
+parameters_advanced_model = {"accumulate_grad_step": 2,
                              "optimizer_method": "{'optim': optim.Adam, 'lr': 0.003}",
                              "lstm_hidden_dim": 0,
                              "word_embedding_name_or_size_and_freeze_flag": "('100', False)",
                              "tag_embedding_dim": 25,
                              "mlp_hidden_dim": 150,
                              "bilstm_layers": 3,
-                             "dropout_alpha": 0.1,
-                             "lstm_dropout": 0.0,
+                             "dropout_alpha": 0.0,
+                             "lstm_dropout": 0.1,
                              "activation": "nn.ReLU",
                              "min_freq": 1,
-                             'mlp_dropout': 0.3,
+                             'mlp_dropout': 0.1,
                              }
 
 # parameters_advanced_model = {"accumulate_grad_step": 2,
@@ -147,21 +147,16 @@ def optimization_wrapper(args, logger, path_train, path_test, params_dict):
 
         accuracy_train_list, loss_train_list, loss_test_list, accuracy_test_list = [], [], [], []
         max_test_acc, prev_test_acc = -1, -1
-        writer_ = SummaryWriter('runs/bilstm')
 
         for epoch in range(1, args.num_epochs + 1):
             # Forward + Backward on train
             train_acc, train_loss = run_and_evaluate(model,
                                                      train_dataloader,
                                                      accumulate_grad_steps=params_dict["accumulate_grad_step"],
-                                                     optimizer=optimizer)
+                                                     optimizer=optimizer, epoch=epoch)
 
 
-            writer_.add_scalar('train/loss', train_loss, epoch)
-            for batch_idx, input_data in enumerate(tqdm.tqdm(train_dataloader)):
-                writer_.add_graph(model, (input_data,))
-                break
-            writer_.flush()
+
 
 
             # # Evaluate on train

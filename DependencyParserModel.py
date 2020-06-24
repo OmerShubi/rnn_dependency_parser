@@ -50,9 +50,8 @@ class KiperwasserDependencyParser(nn.Module):
         self.log_soft_max = nn.LogSoftmax(dim=0)
 
     def forward(self, sentence):
-        loss, predicted_tree = self.infer(sentence)
-
-        return loss, predicted_tree
+        scores = self.infer(sentence)
+        return scores
 
     def infer(self, sentence, is_test=False, is_comp=False):
         cm = torch.no_grad() if is_comp else nullcontext()
@@ -78,24 +77,11 @@ class KiperwasserDependencyParser(nn.Module):
             input_embeddings = torch.cat((word_embbedings, tag_embbedings), dim=2)
 
             # Get Bi-LSTM hidden representation for each word+tag in sentence
-            lstm_output, _ = self.encoder(input_embeddings.view(1, input_embeddings.shape[1], -1))
-
+            lstm_output, _ = self.encoder(input_embeddings)
             # Get score for each possible edge in the parsing graph, construct score matrix
             scores = self.mlp_edge_scorer(lstm_output)
+            return  scores
 
-            # Use Chu-Liu-Edmonds to get the predicted parse tree T' given the calculated score matrix
-            seq_len = lstm_output.size(1)
-            predicted_tree_heads, _ = self.decoder(scores.data.cpu().numpy(), seq_len, False)
-
-            if not is_comp:
-                true_tree_heads = true_tree_heads.squeeze(0)
-                # Calculate the negative log likelihood loss described above
-                probs_logged = self.log_soft_max(scores)
-                loss = KiperwasserDependencyParser.nll_loss(probs_logged, true_tree_heads, self.device)
-                return loss, torch.from_numpy(predicted_tree_heads)
-
-            else:
-                return torch.from_numpy(predicted_tree_heads)
 
     @staticmethod
     def nll_loss(probs_logged, tree, device):
