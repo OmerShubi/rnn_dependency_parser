@@ -10,7 +10,8 @@ from argparse import ArgumentParser
 import csv
 import numpy as np
 import time
-from ax import optimize #TODO
+# from ax import optimize #TODO
+from torch.utils.tensorboard import SummaryWriter
 
 # uncomment for debugging
 # CUDA_LAUNCH_BLOCKING = 1 #
@@ -44,6 +45,20 @@ parameters_advanced_model = {"accumulate_grad_step": 15,
                              "min_freq": 1,
                              'mlp_dropout': 0.3,
                              }
+
+# parameters_advanced_model = {"accumulate_grad_step": 2,
+#                              "optimizer_method": "{'optim': optim.Adam, 'lr': 0.001, 'betas':(0.9,0.9)}",
+#                              "lstm_hidden_dim": 250,
+#                              "word_embedding_name_or_size_and_freeze_flag": "('glove.6B.100d', True)",
+#                              "tag_embedding_dim": 50,
+#                              "mlp_hidden_dim": 300,
+#                              "bilstm_layers": 3,
+#                              "dropout_alpha": 0.05,
+#                              "lstm_dropout": 0.0,
+#                              "activation": "nn.ReLU",
+#                              "min_freq": 1,
+#                              'mlp_dropout': 0.0,
+#                              }
 
 
 def optimization_wrapper(args, logger, path_train, path_test, params_dict):
@@ -130,8 +145,9 @@ def optimization_wrapper(args, logger, path_train, path_test, params_dict):
         start_time = time.time()
         start_time_printable = datetime.datetime.now().strftime('%d-%m-%H%M')
 
-        accuracy_train_list, loss_train_list, loss_test_list , accuracy_test_list = [], [], [], []
+        accuracy_train_list, loss_train_list, loss_test_list, accuracy_test_list = [], [], [], []
         max_test_acc, prev_test_acc = -1, -1
+        writer_ = SummaryWriter()
 
         for epoch in range(1, args.num_epochs + 1):
             # Forward + Backward on train
@@ -139,6 +155,10 @@ def optimization_wrapper(args, logger, path_train, path_test, params_dict):
                                                      train_dataloader,
                                                      accumulate_grad_steps=params_dict["accumulate_grad_step"],
                                                      optimizer=optimizer)
+
+            writer_.add_scalar('train/loss', train_loss, epoch)
+            writer_.flush()
+
 
             # # Evaluate on train
             # train_acc, train_loss = run_and_evaluate(model,
@@ -239,121 +259,120 @@ def main():
         path_test = data_dir + "test.labeled"
     logger.debug(f"Starting train: {path_train} test:{path_test}")
 
-
-    if args.search_hyperparams:
-        best_parameters, best_values, experiment, model = optimize(
-            parameters=[
-                {
-                    "name": "accumulate_grad_step",
-                    "type": "choice",
-                    "is_numeric": False,
-                    "values": [2, 5, 10, 20],
-                },
-                {
-                    "name": "optimizer_method",
-                    "type": "choice",
-                    "is_numeric": False,
-                    "values": ["{'optim':optim.Adam, 'lr':0.001, 'betas':(0.9, 0.999)}",
-                               "{'optim':optim.Adam, 'lr':0.01, 'betas':(0.9, 0.9)}",
-                               "{'optim':optim.Adam, 'lr':0.001, 'betas':(0.9, 0.9)}",
-                               "{'optim':optim.Adam, 'lr':0.0005, 'betas':(0.9, 0.9)}",
-                               "{'optim':optim.SGD, 'lr':0.01}",
-                               "{'optim':optim.SGD, 'lr':0.1}",
-                               "{'optim':optim.SGD, 'lr':0.001}",
-                               "{'optim':optim.SGD, 'lr':1.0}",
-                               "{'optim':optim.AdamW, 'lr':0.001, 'betas':(0.9, 0.999)}",
-                               "{'optim':optim.AdamW, 'lr':0.002, 'betas':(0.9, 0.9)}",
-                               "{'optim':optim.AdamW, 'lr':0.0005, 'betas':(0.9, 0.9)}",
-                               "{'optim':optim.AdamW, 'lr':0.001, 'betas':(0.9, 0.9)}",
-                               "{'optim':optim.Adadelta, 'lr':1}",
-                               "{'optim':optim.Adadelta, 'lr':2}"],
-                },
-                {
-                    "name": "lstm_hidden_dim",
-                    "type": "choice",
-                    "is_numeric": False,
-                    "values": [125, 200, 300, 400, 0],
-                },
-                {
-                    "name": "word_embedding_name_or_size_and_freeze_flag",
-                    "type": "choice",
-                    "is_numeric": False,
-                    "values": ["('glove.6B.50d', True)",
-                               "('glove.6B.50d', False)",
-                               "('glove.6B.100d', True)",
-                               "('glove.6B.100d', False)",
-                               "('glove.6B.200d', True)",
-                               "('glove.6B.200d', False)",
-                               "('glove.6B.300d', True)",
-                               "('glove.6B.300d', False)",
-                               "('glove.840B.300d', True)",
-                               "('glove.840B.300d', False)",
-                               "('fasttext.en.300d', True)",
-                               "('fasttext.en.300d', False)",
-                               "('25', False)",
-                               "('50', False)",
-                               "('100', False)",
-                               "('200', False)",
-                               "('300', False)"]
-                },
-                {
-                    "name": "tag_embedding_dim",
-                    "type": "choice",
-                    "is_numeric": False,
-                    "values": [5, 10, 25, 50, 150],
-                },
-                {
-                    "name": "mlp_hidden_dim",
-                    "type": "choice",
-                    "is_numeric": False,
-                    "values": [50, 100, 200, 300, 400, 500],
-                },
-                {
-                    "name": "bilstm_layers",
-                    "type": "choice",
-                    "is_numeric": False,
-                    "values": [1, 2, 3, 4]
-                },
-                {
-                    "name": "dropout_alpha",
-                    "type": "choice",
-                    "is_numeric": False,
-                    "values": [0.0, 0.05, 0.1, 0.25]
-                },
-                {
-                    "name": "lstm_dropout",
-                    "type": "choice",
-                    "is_numeric": False,
-                    "values": [0.0, 0.15, 0.3]
-                },
-                {
-                    "name": "activation",
-                    "type": "choice",
-                    "is_numeric": False,
-                    "values": ["nn.Tanh", "nn.ReLU", "nn.Sigmoid", "nn.LeakyReLU"]
-                },
-                {
-                    "name": "min_freq",
-                    "type": "choice",
-                    "is_numeric": False,
-                    "values": [1, 2, 3, 5]
-                },
-                {
-                    "name": "mlp_dropout",
-                    "type": "choice",
-                    "is_numeric": False,
-                    "values": [0.0, 0.15, 0.3]
-                },
-            ],
-            evaluation_function=lambda p: optimization_wrapper(args, logger, path_train, path_test, p),
-            minimize=False,
-            total_trials=args.total_trails,
-            objective_name="UAS accuracy",
-        )
-
-        logger.debug(f"{best_parameters},{best_values[0]}")
-    else:
-        optimization_wrapper(args, logger, path_train, path_test, parameters_advanced_model)
+    # if args.search_hyperparams:
+    #     best_parameters, best_values, experiment, model = optimize(
+    #         parameters=[
+    #             {
+    #                 "name": "accumulate_grad_step",
+    #                 "type": "choice",
+    #                 "is_numeric": False,
+    #                 "values": [2, 5, 10, 20],
+    #             },
+    #             {
+    #                 "name": "optimizer_method",
+    #                 "type": "choice",
+    #                 "is_numeric": False,
+    #                 "values": ["{'optim':optim.Adam, 'lr':0.001, 'betas':(0.9, 0.999)}",
+    #                            "{'optim':optim.Adam, 'lr':0.01, 'betas':(0.9, 0.9)}",
+    #                            "{'optim':optim.Adam, 'lr':0.001, 'betas':(0.9, 0.9)}",
+    #                            "{'optim':optim.Adam, 'lr':0.0005, 'betas':(0.9, 0.9)}",
+    #                            "{'optim':optim.SGD, 'lr':0.01}",
+    #                            "{'optim':optim.SGD, 'lr':0.1}",
+    #                            "{'optim':optim.SGD, 'lr':0.001}",
+    #                            "{'optim':optim.SGD, 'lr':1.0}",
+    #                            "{'optim':optim.AdamW, 'lr':0.001, 'betas':(0.9, 0.999)}",
+    #                            "{'optim':optim.AdamW, 'lr':0.002, 'betas':(0.9, 0.9)}",
+    #                            "{'optim':optim.AdamW, 'lr':0.0005, 'betas':(0.9, 0.9)}",
+    #                            "{'optim':optim.AdamW, 'lr':0.001, 'betas':(0.9, 0.9)}",
+    #                            "{'optim':optim.Adadelta, 'lr':1}",
+    #                            "{'optim':optim.Adadelta, 'lr':2}"],
+    #             },
+    #             {
+    #                 "name": "lstm_hidden_dim",
+    #                 "type": "choice",
+    #                 "is_numeric": False,
+    #                 "values": [125, 200, 300, 400, 0],
+    #             },
+    #             {
+    #                 "name": "word_embedding_name_or_size_and_freeze_flag",
+    #                 "type": "choice",
+    #                 "is_numeric": False,
+    #                 "values": ["('glove.6B.50d', True)",
+    #                            "('glove.6B.50d', False)",
+    #                            "('glove.6B.100d', True)",
+    #                            "('glove.6B.100d', False)",
+    #                            "('glove.6B.200d', True)",
+    #                            "('glove.6B.200d', False)",
+    #                            "('glove.6B.300d', True)",
+    #                            "('glove.6B.300d', False)",
+    #                            "('glove.840B.300d', True)",
+    #                            "('glove.840B.300d', False)",
+    #                            "('fasttext.en.300d', True)",
+    #                            "('fasttext.en.300d', False)",
+    #                            "('25', False)",
+    #                            "('50', False)",
+    #                            "('100', False)",
+    #                            "('200', False)",
+    #                            "('300', False)"]
+    #             },
+    #             {
+    #                 "name": "tag_embedding_dim",
+    #                 "type": "choice",
+    #                 "is_numeric": False,
+    #                 "values": [5, 10, 25, 50, 150],
+    #             },
+    #             {
+    #                 "name": "mlp_hidden_dim",
+    #                 "type": "choice",
+    #                 "is_numeric": False,
+    #                 "values": [50, 100, 200, 300, 400, 500],
+    #             },
+    #             {
+    #                 "name": "bilstm_layers",
+    #                 "type": "choice",
+    #                 "is_numeric": False,
+    #                 "values": [1, 2, 3, 4]
+    #             },
+    #             {
+    #                 "name": "dropout_alpha",
+    #                 "type": "choice",
+    #                 "is_numeric": False,
+    #                 "values": [0.0, 0.05, 0.1, 0.25]
+    #             },
+    #             {
+    #                 "name": "lstm_dropout",
+    #                 "type": "choice",
+    #                 "is_numeric": False,
+    #                 "values": [0.0, 0.15, 0.3]
+    #             },
+    #             {
+    #                 "name": "activation",
+    #                 "type": "choice",
+    #                 "is_numeric": False,
+    #                 "values": ["nn.Tanh", "nn.ReLU", "nn.Sigmoid", "nn.LeakyReLU"]
+    #             },
+    #             {
+    #                 "name": "min_freq",
+    #                 "type": "choice",
+    #                 "is_numeric": False,
+    #                 "values": [1, 2, 3, 5]
+    #             },
+    #             {
+    #                 "name": "mlp_dropout",
+    #                 "type": "choice",
+    #                 "is_numeric": False,
+    #                 "values": [0.0, 0.15, 0.3]
+    #             },
+    #         ],
+    #         evaluation_function=lambda p: optimization_wrapper(args, logger, path_train, path_test, p),
+    #         minimize=False,
+    #         total_trials=args.total_trails,
+    #         objective_name="UAS accuracy",
+    #     )
+    #
+    #     logger.debug(f"{best_parameters},{best_values[0]}")
+    # else:
+    optimization_wrapper(args, logger, path_train, path_test, parameters_advanced_model)
 
 
 if __name__ == "__main__":
