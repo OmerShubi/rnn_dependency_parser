@@ -147,7 +147,7 @@ def optimization_wrapper(args, logger, path_train, path_test, params_dict):
 
         accuracy_train_list, loss_train_list, loss_test_list, accuracy_test_list = [], [], [], []
         max_test_acc, prev_test_acc = -1, -1
-        writer_ = SummaryWriter()
+        writer_ = SummaryWriter('runs/bilstm')
 
         for epoch in range(1, args.num_epochs + 1):
             # Forward + Backward on train
@@ -156,7 +156,11 @@ def optimization_wrapper(args, logger, path_train, path_test, params_dict):
                                                      accumulate_grad_steps=params_dict["accumulate_grad_step"],
                                                      optimizer=optimizer)
 
+
             writer_.add_scalar('train/loss', train_loss, epoch)
+            for batch_idx, input_data in enumerate(tqdm.tqdm(train_dataloader)):
+                writer_.add_graph(model, (input_data,))
+                break
             writer_.flush()
 
 
