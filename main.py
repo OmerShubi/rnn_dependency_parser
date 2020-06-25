@@ -1,6 +1,6 @@
 # Imports
 import datetime
-
+import torch.optim as optim
 from torch import load
 from torch.utils.data import DataLoader
 import logging.config
@@ -113,15 +113,16 @@ def optimization_wrapper(args, logger, path_train, path_test, params_dict):
 
         for epoch in range(1, params_dict['num_epochs'] + 1):
             # Forward + Backward on train
-            _, _ = run_and_evaluate(model,
-                                    train_dataloader,
-                                    accumulate_grad_steps=params_dict["accumulate_grad_step"],
-                                    optimizer=optimizer)
-
-            # Evaluate on train
             train_acc, train_loss = run_and_evaluate(model,
                                                      train_dataloader,
-                                                     is_test=True)
+                                                     accumulate_grad_steps=params_dict["accumulate_grad_step"],
+                                                     optimizer=optimizer)
+
+            if epoch == 1:
+                # Evaluate on train
+                train_acc, train_loss = run_and_evaluate(model,
+                                                         train_dataloader,
+                                                         is_test=True)
 
             start_time_test = time.time()
             # Evaluate on test
@@ -160,7 +161,8 @@ def optimization_wrapper(args, logger, path_train, path_test, params_dict):
                 break
 
         # Plot Accuracy
-        create_graph(accuracy_train_list, accuracy_test_list, "Accuracy", f'model_{start_time_printable}_{args.model_id}')
+        create_graph(accuracy_train_list, accuracy_test_list, "Accuracy",
+                     f'model_{start_time_printable}_{args.model_id}')
 
         # Plot Loss
         create_graph(loss_train_list, loss_test_list, "Loss", f'model_{start_time_printable}_{args.model_id}')
