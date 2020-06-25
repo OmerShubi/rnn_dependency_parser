@@ -6,7 +6,6 @@ import random
 
 
 class KiperwasserDependencyParser(nn.Module):
-    # TODO lstm_out_dim use
     def __init__(self, word_dict, tag_dict, word_list, tag_list,
                  tag_embedding_dim, word_embedding_dim, pretrained_embedding, lstm_hidden_dim,
                  mlp_hidden_dim, bilstm_layers, dropout_alpha, activation, freeze_embedding, lstm_dropout, mlp_dropout):
@@ -19,7 +18,7 @@ class KiperwasserDependencyParser(nn.Module):
         self.tag_dict = tag_dict
         self.tag_list = tag_list
         self.word_list = word_list
-        self.unknown_word_idx = 1 # TODO
+        self.unknown_word_idx = 1
         self.unknown_tag_idx = 1
         self.root_idx = 0
         self.dropout = dropout_alpha
