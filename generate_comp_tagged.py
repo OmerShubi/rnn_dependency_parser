@@ -15,24 +15,18 @@ def main():
     path_model2 = "models/model2.pth"
     models_paths = [path_model1, path_model2]
 
-    """
-    train = DepDataset(word_dict=word_dict,
-                       tag_dict=tag_dict,
-                       file_path=path_train,
-                       word_embedding_name_or_size=word_embedding_name_or_size,
-                       comp=args.comp,
-                       min_freq=params_dict["min_freq"],
-                       lower_case=lower_case)"""
-
     for model_path in models_paths:
+
         model_id = model_path.split(".")[0][-1]
-        comp_tagged_path = f"comp_m{model_id}_206348187.labeled"  # TODO change name by req
+        lower_case = False if model_id == 1 else True  # TODO finalize according to model 2
+
+        comp_tagged_path = f"comp_m{model_id}_206348187.labeled"
 
         # load model
         model = load(model_path)
 
         # Get the dictionaries that the model trained on
-        word_dict, tag_dict = model.word_dict, model.tag_dict  # TODO maybe use word_to_index_dict
+        word_dict, tag_dict = model.word_dict, model.tag_dict
 
         # Preprocess the competition file
         comp = DepDataset(word_dict=word_dict,
@@ -40,7 +34,7 @@ def main():
                           file_path=comp_path,
                           word_embedding_name_or_size=model.word_embedding_dim,
                           min_freq=1,
-                          lower_case=True,  # TODO
+                          lower_case=lower_case,
                           comp=True)
         comp_dataloader = DataLoader(comp, shuffle=False)
 
