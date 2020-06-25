@@ -10,7 +10,7 @@ from argparse import ArgumentParser
 import csv
 import numpy as np
 import time
-from ax import optimize #TODO
+from ax import optimize  # TODO
 
 # uncomment for debugging
 # CUDA_LAUNCH_BLOCKING = 1 #
@@ -27,7 +27,7 @@ parameters_basic_model = {"accumulate_grad_step": 5,
                           "activation": "nn.Tanh",
                           "min_freq": 1,
                           'mlp_dropout': 0.0,
-                          } # Todo lowercase flag
+                          }  # Todo lowercase flag
 
 parameters_advanced_model = {"accumulate_grad_step": 15,
                              "optimizer_method": "{'optim': optim.Adam, 'lr': 0.003}",
@@ -143,15 +143,15 @@ def optimization_wrapper(args, logger, path_train, path_test, params_dict, lower
 
         for epoch in range(1, args.num_epochs + 1):
             # Forward + Backward on train
-            train_acc, train_loss = run_and_evaluate(model,
-                                                     train_dataloader,
-                                                     accumulate_grad_steps=params_dict["accumulate_grad_step"],
-                                                     optimizer=optimizer)
+            _, _ = run_and_evaluate(model,
+                                    train_dataloader,
+                                    accumulate_grad_steps=params_dict["accumulate_grad_step"],
+                                    optimizer=optimizer)
 
             # # Evaluate on train
-            # train_acc, train_loss = run_and_evaluate(model,
-            #                                          train_dataloader,
-            #                                          is_test=True)
+            train_acc, train_loss = run_and_evaluate(model,
+                                                     train_dataloader,
+                                                     is_test=True)
 
             start_time_test = time.time()
             # Evaluate on test
@@ -176,7 +176,7 @@ def optimization_wrapper(args, logger, path_train, path_test, params_dict, lower
                 max_test_acc = test_acc
 
                 # Save model # TODO
-                torch.save(model, f"models/model1_{start_time_printable}_{round(max_test_acc,4)}.pth")
+                torch.save(model, f"models/model1_{start_time_printable}_{round(max_test_acc, 4)}.pth")
 
             if test_acc > prev_test_acc:
                 epochs_no_improve = 0
