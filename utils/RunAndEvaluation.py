@@ -1,17 +1,13 @@
-import datetime
-
-import torch
-import tqdm
-import os
+from contextlib import nullcontext
 import matplotlib
 import matplotlib.pyplot as plt
-from contextlib import nullcontext
 import seaborn as sns
+import torch
+import tqdm
 
 matplotlib.use('Agg')
 
 
-# TODO generate comp loss
 def run_and_evaluate(model, dataloader, accumulate_grad_steps=None, optimizer=None, is_test=False):
     total_acc, total_loss = 0, 0
     i = 0
@@ -42,7 +38,6 @@ def run_and_evaluate(model, dataloader, accumulate_grad_steps=None, optimizer=No
     return total_acc, total_loss
 
 
-# TODO generate comp tag - change from acc to total num calc
 def num_of_correct_one_sen(pred_heads, true_heads):
     pred_heads = pred_heads[1:]  # remove root head (-1)
     true_heads = true_heads[0][1:]  # remove root head (-1)
@@ -55,8 +50,9 @@ def create_graph(train_list, test_list, label, time):
     plt.figure()
     plt.plot(train_list, c=color, label=label + '_train', linestyle='-')
     plt.plot(test_list, c=color, label=label + '_test', linestyle='--')
+    plt.title(f"{label} of train and test for each epoch")
     plt.xlabel("Epochs")
-    plt.ylabel("Value")
+    plt.ylabel(f"{label} Value")
     plt.legend()
     plt.savefig(f'Graphs/{label}_{time}.png')
     plt.close()
