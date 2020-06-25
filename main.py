@@ -45,6 +45,16 @@ parameters_advanced_model = {"accumulate_grad_step": 15,
 
 
 def optimization_wrapper(args, logger, path_train, path_test, params_dict, lower_case_flag=True):
+    """
+    TODO
+    :param args:
+    :param logger:
+    :param path_train:
+    :param path_test:
+    :param params_dict:
+    :param lower_case_flag:
+    :return:
+    """
 
     logger.debug(f"Using params:{params_dict.items()}")
 
@@ -128,7 +138,7 @@ def optimization_wrapper(args, logger, path_train, path_test, params_dict, lower
         start_time = time.time()
         start_time_printable = datetime.datetime.now().strftime('%d-%m-%H%M')
 
-        accuracy_train_list, loss_train_list, loss_test_list , accuracy_test_list = [], [], [], []
+        accuracy_train_list, loss_train_list, loss_test_list, accuracy_test_list = [], [], [], []
         max_test_acc, prev_test_acc = -1, -1
 
         for epoch in range(1, args.num_epochs + 1):
@@ -199,6 +209,14 @@ def optimization_wrapper(args, logger, path_train, path_test, params_dict, lower
 
 
 def write_results(accuracy_test_list, args, params_dict, start_time_printable):
+    """
+
+    :param accuracy_test_list:
+    :param args:
+    :param params_dict:
+    :param start_time_printable:
+    :return:
+    """
     # save results in csv
     with open("results/results.csv", 'a') as csv_file:
         writer = csv.writer(csv_file)
