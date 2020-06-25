@@ -1,6 +1,8 @@
+import csv
 from contextlib import nullcontext
 import matplotlib
 import matplotlib.pyplot as plt
+import numpy as np
 import seaborn as sns
 import torch
 import tqdm
@@ -53,6 +55,26 @@ def create_graph(train_list, test_list, label, time):
     plt.title(f"{label} of train and test for each epoch")
     plt.xlabel("Epochs")
     plt.ylabel(f"{label} Value")
+    plt.ylim(bottom=0)
     plt.legend()
     plt.savefig(f'Graphs/{label}_{time}.png')
     plt.close()
+
+
+def write_results(accuracy_test_list, args, params_dict, start_time_printable):
+    """
+
+    :param accuracy_test_list:
+    :param args:
+    :param params_dict:
+    :param start_time_printable:
+    :return:
+    """
+    # save results in csv
+    with open("results/results.csv", 'a') as csv_file:
+        writer = csv.writer(csv_file)
+        max_accur = max(accuracy_test_list)
+        writer.writerow(
+            [args.debug, params_dict['num_epochs'], np.argmax(np.array(accuracy_test_list)) + 1, max_accur, args.msg,
+             start_time_printable] +
+            list(params_dict.values()))

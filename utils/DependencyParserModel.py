@@ -1,6 +1,6 @@
-from chu_liu_edmonds import decode_mst
+from utils.chu_liu_edmonds import decode_mst
 from utils.DataPreprocessing import *
-from MLP import *
+from utils.MLP import *
 from contextlib import nullcontext
 import random
 

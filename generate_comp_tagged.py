@@ -1,5 +1,4 @@
 from torch.utils.data.dataloader import DataLoader
-import DependencyParserModel
 from utils.RunAndEvaluation import *
 from torch import load
 from utils.DataPreprocessing import *

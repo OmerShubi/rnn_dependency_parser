@@ -1,20 +1,18 @@
 # Imports
 import datetime
 
-import torch.optim as optim
 from torch import load
 from torch.utils.data import DataLoader
 import logging.config
-from DependencyParserModel import *
+from utils.DependencyParserModel import *
 from utils.DataPreprocessing import *
 from utils.RunAndEvaluation import *
 from argparse import ArgumentParser
-import csv
-import numpy as np
 import time
 
 # uncomment for debugging
 # CUDA_LAUNCH_BLOCKING = 1 #
+from utils.RunAndEvaluation import write_results
 
 
 def optimization_wrapper(args, logger, path_train, path_test, params_dict):
@@ -148,7 +146,7 @@ def optimization_wrapper(args, logger, path_train, path_test, params_dict):
                 max_test_acc = test_acc
 
                 # Save model
-                torch.save(model, f"models/model{args.model_id}.pth")
+                torch.save(model, f"models/model_{start_time_printable}_{args.model_id}.pth")
 
             if test_acc > prev_test_acc:
                 epochs_no_improve = 0
@@ -162,10 +160,10 @@ def optimization_wrapper(args, logger, path_train, path_test, params_dict):
                 break
 
         # Plot Accuracy
-        create_graph(accuracy_train_list, accuracy_test_list, "Accuracy", start_time_printable)
+        create_graph(accuracy_train_list, accuracy_test_list, "Accuracy", f'model_{start_time_printable}_{args.model_id}')
 
         # Plot Loss
-        create_graph(loss_train_list, loss_test_list, "Loss", start_time_printable)
+        create_graph(loss_train_list, loss_test_list, "Loss", f'model_{start_time_printable}_{args.model_id}')
 
         logger.debug(f"training took {round(time.time() - start_time, 0)} seconds with max test acc of {max_test_acc}")
 
@@ -173,25 +171,6 @@ def optimization_wrapper(args, logger, path_train, path_test, params_dict):
         write_results(accuracy_test_list, args, params_dict, start_time_printable)
 
         return max(accuracy_test_list)
-
-
-def write_results(accuracy_test_list, args, params_dict, start_time_printable):
-    """
-
-    :param accuracy_test_list:
-    :param args:
-    :param params_dict:
-    :param start_time_printable:
-    :return:
-    """
-    # save results in csv
-    with open("results/results.csv", 'a') as csv_file:
-        writer = csv.writer(csv_file)
-        max_accur = max(accuracy_test_list)
-        writer.writerow(
-            [args.debug, params_dict['num_epochs'], np.argmax(np.array(accuracy_test_list)) + 1, max_accur, args.msg,
-             start_time_printable] +
-            list(params_dict.values()))
 
 
 def main():
