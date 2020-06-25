@@ -8,11 +8,12 @@ UNKNOWN_TOKEN = UNKNOWN_TAG = "<unk>"
 SPECIAL_TOKENS = [ROOT_WORD, UNKNOWN_TOKEN]
 
 
-# TODO min and max thresholds for word occurences
 def get_vocabs(list_of_paths, lower_case):
     """
         TODO Fix docs
         Extract vocabs from given datasets. Return a word2ids and tag2idx.
+        :param lower_case:
+        :param list_of_paths:
         :param file_paths: a list with a full path for all corpuses
             Return:
               - word2idx
@@ -36,11 +37,8 @@ def get_vocabs(list_of_paths, lower_case):
 
 
 class DepDataReader:
-    # TODO comp use
-    def __init__(self, file, word_dict, tag_dict, word_to_idx_dict, tag_to_idx_dict, comp=False, lower_case=True):
+    def __init__(self, file, word_to_idx_dict, tag_to_idx_dict, comp=False, lower_case=True):
         self.file = file
-        self.word_dict = word_dict # TODO not in use
-        self.tag_dict = tag_dict # TODO not in use
         self.sentences = []
         self.word_to_idx_dict = word_to_idx_dict
         self.tag_to_idx_dict = tag_to_idx_dict
@@ -81,35 +79,26 @@ class DepDataReader:
                     curr_tag = splited_words[3]
                     curr_tag_idx = self.tag_to_idx_dict.get(curr_tag, unknown_tag_idx)
 
-                    # TODO comp use
                     curr_head = -1 if self.comp else int(splited_words[6])
 
                     seen_words.append(curr_word_idx)
                     seen_tags.append(curr_tag_idx)
                     seen_heads.append(curr_head)
 
-    # todo delete - no use
-    def get_num_sentences(self):
-        """returns num of sentences in data"""
-        return len(self.sentences)
-
 
 class DepDataset(Dataset):
-    # TODO comp use
     def __init__(self, word_dict, tag_dict, file_path: str, word_embedding_name_or_size, comp, min_freq, lower_case):
         super().__init__()
         self.file = file_path
         self.word_vocab_size = len(word_dict)  # number of words in vocabulary
-        # TODO delete self.word_vectors
         self.word_to_idx_dict, self.words_list, self.word_vectors = DepDataset.init_word_embeddings(word_dict,
                                                                                                     word_embedding_name_or_size,
                                                                                                     min_freq)
         self.tag_to_idx_dict, self.tags_list = DepDataset.init_tag_vocab(tag_dict)
-        # TODO delete self.unknown_idx,root_idx
         self.unknown_idx = self.word_to_idx_dict.get(UNKNOWN_TOKEN)
         self.unknown_tag_idx = self.tag_to_idx_dict.get(UNKNOWN_TAG)
         self.root_idx = self.word_to_idx_dict.get(ROOT_WORD)
-        datareader = DepDataReader(self.file, word_dict, tag_dict, self.word_to_idx_dict, self.tag_to_idx_dict, comp, lower_case)
+        datareader = DepDataReader(self.file, self.word_to_idx_dict, self.tag_to_idx_dict, comp, lower_case)
         self.sentences_dataset = datareader.sentences
         sentences_lens = [len(sentence[0]) - 1 for sentence in self.sentences_dataset]
         self.num_edges = sum(sentences_lens)  # num of words
