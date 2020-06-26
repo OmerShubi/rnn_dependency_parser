@@ -18,9 +18,9 @@ def main():
     for index, model_path in enumerate(models_paths):
 
         model_id = model_path.split(".")[0][-1]
-        lower_case = False if model_id == 1 else True  # TODO finalize according to model 2
+        lower_case = False if model_id == 1 else True
 
-        comp_tagged_path = "comp_m{model_id}_206348187.labeled" # TODO finalize
+        comp_tagged_path = "comp_m{model_id}_206348187.labeled"
 
         # load model
         model = load(model_path)

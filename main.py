@@ -19,14 +19,15 @@ from utils.RunAndEvaluation import write_results
 
 def optimization_wrapper(args, logger, path_train, path_test, params_dict):
     """
-    TODO
-    :param args:
-    :param logger:
-    :param path_train:
-    :param path_test:
-    :param params_dict:
-    :param lower_case_flag:
-    :return:
+    Trains and evaluates a full model
+
+    :param args: expects args from main with relevant arguments
+    :param logger: logger to log the results to
+    :param path_train: path of train data
+    :param path_test: path of test data
+    :param params_dict: dictionary of params as expected
+
+    :return: max accuracy achieved on the test
     """
 
     logger.debug(f"Using params:{params_dict.items()}")
@@ -144,7 +145,7 @@ def optimization_wrapper(args, logger, path_train, path_test, params_dict):
                          f"Curr Train Accuracy: {train_acc}\t Curr Test Loss: {test_loss}\t"
                          f"Curr Test Accuracy: {test_acc}\n")
 
-            # Store the best model # TODO what is the best mode??
+            # Store the best model
             if test_acc > max_test_acc:
                 max_test_acc = test_acc
                 # Save model
@@ -186,7 +187,6 @@ def main():
     model2 Run example:
         python main.py --model_id=2
 
-    :return:
     """
     parser = ArgumentParser()
     parser.add_argument('--skip_train', help='if skip train', action='store_true', default=False)

@@ -12,11 +12,10 @@ SPECIAL_TOKENS = [ROOT_WORD, UNKNOWN_TOKEN]
 
 def get_vocabs(list_of_paths, lower_case):
     """
-        TODO Fix docs
-        Extract vocabs from given datasets. Return a word2ids and tag2idx.
-        :param lower_case:
-        :param list_of_paths:
-        :param file_paths: a list with a full path for all corpuses
+        Extract vocabs from given datasets. Return a word2ids and tag2idx
+
+        :param lower_case: whether to turn word to lower case
+        :param list_of_paths: a list with a full path for all corpuses
             Return:
               - word2idx
               - tag2idx number of count of each tag
@@ -40,6 +39,15 @@ def get_vocabs(list_of_paths, lower_case):
 
 class DepDataReader:
     def __init__(self, file, word_to_idx_dict, tag_to_idx_dict, comp=False, lower_case=True):
+        """
+        Turns the data to indexes
+
+        :param file: path to file
+        :param word_to_idx_dict: dictionary of words (keys) and indexes (values) in list
+        :param tag_to_idx_dict: dictionary of tags (keys) and indexes (values) in list
+        :param comp: bool flag indicating if this is a competition file or not
+        :param lower_case: bool flag indicating if save as lower case
+        """
         self.file = file
         self.sentences = []
         self.word_to_idx_dict = word_to_idx_dict
@@ -90,6 +98,16 @@ class DepDataReader:
 
 class DepDataset(Dataset):
     def __init__(self, word_dict, tag_dict, file_path: str, word_embedding_name_or_size, comp, min_freq, lower_case):
+        """
+
+        :param word_dict: dictionary of words
+        :param tag_dict: dictionary of tags
+        :param file_path: path of file
+        :param word_embedding_name_or_size: should be string of e.g. 'glove.6B.100d' or '100'
+        :param comp: bool flag indicating if competition file
+        :param min_freq: min freq to include in vocabulary
+        :param lower_case: bool flag indicating if save as lower case
+        """
         super().__init__()
         self.file = file_path
         self.word_vocab_size = len(word_dict)  # number of words in vocabulary

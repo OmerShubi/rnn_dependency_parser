@@ -13,6 +13,16 @@ matplotlib.use('Agg')
 
 
 def run_and_evaluate(model, dataloader, accumulate_grad_steps=None, optimizer=None, is_test=False):
+    """
+    Run train or evaluate
+
+    :param model: the torch model
+    :param dataloader: the data to run the model on, should be torch Dataloader
+    :param accumulate_grad_steps: number of steps per 'batch' trip
+    :param optimizer: torch.optim optimizer
+    :param is_test: bool flag indicating if test run
+    :return:
+    """
     total_acc, total_loss = 0, 0
     i = 0
     # torch.no_grad - temp covert all grad flags to False
@@ -43,12 +53,28 @@ def run_and_evaluate(model, dataloader, accumulate_grad_steps=None, optimizer=No
 
 
 def num_of_correct_one_sen(pred_heads, true_heads):
+    """
+    Calculates how many heads are predicted correctly
+
+    :param pred_heads: tensor of predicted head indices
+    :param true_heads: tensor of true head indices
+    :return: number of correct heads
+    """
     pred_heads = pred_heads[1:]  # remove root head (-1)
     true_heads = true_heads[0][1:]  # remove root head (-1)
     return float((pred_heads.eq(true_heads)).sum())
 
 
 def create_graph(train_list, test_list, label, time):
+    """
+    Plot the graph
+
+    :param train_list: list of values calculated from the train data
+    :param test_list: list of values calculated from the test data
+    :param label: string corresponding to what the values mean - e.g. 'Accuracy/Loss'
+    :param time: string of time for unique graph saving
+    :return: saves a graph png
+    """
     sns.set()
     color = "red" if label == "Accuracy" else "blue"
     plt.figure()
@@ -65,12 +91,13 @@ def create_graph(train_list, test_list, label, time):
 
 def write_results(accuracy_test_list, args, params_dict, start_time_printable):
     """
+    Write to csv file the current run results
 
-    :param accuracy_test_list:
-    :param args:
-    :param params_dict:
-    :param start_time_printable:
-    :return:
+    :param accuracy_test_list: list or test accuracies
+    :param args: should have debug and msg
+    :param params_dict: dict of params that was used
+    :param start_time_printable: time of start training
+    :return: None,  Write to csv file the current run results
     """
     # save results in csv
     with open("results/results.csv", 'a') as csv_file:
