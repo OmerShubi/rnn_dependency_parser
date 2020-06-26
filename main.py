@@ -148,7 +148,7 @@ def optimization_wrapper(args, logger, path_train, path_test, params_dict):
             if test_acc > max_test_acc:
                 max_test_acc = test_acc
                 # Save model
-                torch.save(model, f"models/model_{start_time_printable}_{args.model_id}.pth")
+                torch.save(model, f"models/model_{epoch}_{start_time_printable}_{test_acc}_{args.model_id}.pth")
 
             if test_acc > prev_test_acc:
                 epochs_no_improve = 0
@@ -161,7 +161,7 @@ def optimization_wrapper(args, logger, path_train, path_test, params_dict):
                 logger.debug(f'Early stopping after epoch {epoch} with max test acc of {max_test_acc}')
                 break
 
-            torch.save(model, f"models/model_{epoch}_{start_time_printable}_{test_acc}_{args.model_id}.pth")
+        torch.save(model, f"models/model_{params_dict['num_epochs'] + 1}_{start_time_printable}_{test_acc}_{args.model_id}.pth")
 
         # Plot Accuracy
         create_graph(accuracy_train_list, accuracy_test_list, "Accuracy",
@@ -215,7 +215,7 @@ def main():
         path_test = data_dir + "test.labeled"
 
     if args.combined_train_data:
-        path_train = data_dir + "combined.labeled"
+        path_train = data_dir + "combined_full.labeled"
         path_test = data_dir + "validation.labeled"
 
     logger.debug(f"Starting train: {path_train} test:{path_test}")
