@@ -27,6 +27,7 @@ def run_and_evaluate(model, dataloader, accumulate_grad_steps=None, optimizer=No
                 i += 1
                 loss = loss / accumulate_grad_steps
                 loss.backward()
+                # torch.nn.utils.clip_grad_norm_(model.parameters(), 1)
                 if i % accumulate_grad_steps == 0:
                     optimizer.step()  # updates params
                     model.zero_grad()

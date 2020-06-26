@@ -231,25 +231,25 @@ def main():
                               'lower_case_flag': False,
                               }
 
-    parameters_advanced_model = {"accumulate_grad_step": 15,
-                                 "optimizer_method": "{'optim': optim.Adam, 'lr': 0.003}",
+    parameters_advanced_model = {"accumulate_grad_step": 10,
+                                 "optimizer_method": "{'optim': optim.Adam, 'lr': 0.01, 'betas': (0.9,0.9)}",
                                  "lstm_hidden_dim": 0,
-                                 "word_embedding_name_or_size_and_freeze_flag": "('100', False)",
-                                 "tag_embedding_dim": 25,
-                                 "mlp_hidden_dim": 150,
-                                 "bilstm_layers": 3,
-                                 "dropout_alpha": 0.1,
-                                 "lstm_dropout": 0.0,
+                                 "word_embedding_name_or_size_and_freeze_flag": "('fasttext.en.300d', False)",
+                                 "tag_embedding_dim": 150,
+                                 "mlp_hidden_dim": 100,
+                                 "bilstm_layers": 5,
+                                 "dropout_alpha": 0.3,
+                                 "lstm_dropout": 0.3,
                                  "activation": "nn.ReLU",
                                  "min_freq": 1,
-                                 'mlp_dropout': 0.3,
-                                 'num_epochs': 200,
+                                 'mlp_dropout': 0.15,
+                                 'num_epochs': 5,
                                  'lower_case_flag': True,
                                  }
 
     if args.model_id == 1:
         params = parameters_basic_model
-    elif args.mode_id == 2:
+    elif args.model_id == 2:
         params = parameters_advanced_model
     else:
         print("model id must be 1 or 2")

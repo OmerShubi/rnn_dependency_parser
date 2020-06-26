@@ -49,6 +49,8 @@ class KiperwasserDependencyParser(nn.Module):
 
         self.log_soft_max = nn.LogSoftmax(dim=0)
 
+        self.loss = nn.CrossEntropyLoss(ignore_index=-1)
+
     def forward(self, sentence):
         loss, predicted_tree = self.infer(sentence)
 
@@ -90,8 +92,9 @@ class KiperwasserDependencyParser(nn.Module):
             if not is_comp:
                 true_tree_heads = true_tree_heads.squeeze(0)
                 # Calculate the negative log likelihood loss described above
-                probs_logged = self.log_soft_max(scores)
-                loss = KiperwasserDependencyParser.nll_loss(probs_logged, true_tree_heads, self.device)
+                # probs_logged = self.log_soft_max(scores)
+                # loss = KiperwasserDependencyParser.nll_loss(probs_logged, true_tree_heads, self.device)
+                loss = self.loss(torch.transpose(scores, 0, 1), true_tree_heads.to(self.device))
                 return loss, torch.from_numpy(predicted_tree_heads)
 
             else:
