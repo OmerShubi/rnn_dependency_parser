@@ -35,15 +35,23 @@ It is also possible to run cross validation with the `--do_cv` flags.
 
 For the full options:
 
-```python
-    parser.add_argument('--skip_train', help='if skip train', action='store_true', default=False)
-    parser.add_argument('--model_path', help='if skip train - path model to load', type=str,default="models/model1.pth")
-    parser.add_argument('--msg', help='msg to write in log file', type=str, default='')
-    parser.add_argument('--n_epochs_stop', help='early stopping in training', type=int, default=200)
-    parser.add_argument('--model_id', help='should be 1 or 2', type=int, default=2)
-    parser.add_argument('--comp', action='store_true', default=False)
-    parser.add_argument('--debug', action='store_true', default=False)
-    parser.add_argument('--combined_train_data', action='store_true', default=False)
-    parser.add_argument('--do_cv', action='store_true', default=False)
+```bash
+usage: main.py [-h] [--skip_train] [--model_path MODEL_PATH] [--msg MSG]
+               [--n_epochs_stop N_EPOCHS_STOP] [--model_id MODEL_ID] [--comp]
+               [--debug] [--combined_train_data] [--do_cv]
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --skip_train          if skip train
+  --model_path MODEL_PATH
+                        if skip train - path model to load
+  --msg MSG             msg to write in log file
+  --n_epochs_stop N_EPOCHS_STOP
+                        early stopping in training
+  --model_id MODEL_ID   should be 1 or 2
+  --comp
+  --debug
+  --combined_train_data
+  --do_cv
 ```
 
