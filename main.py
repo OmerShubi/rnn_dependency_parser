@@ -232,37 +232,21 @@ def main():
                               'lower_case_flag': False,
                               }
 
-    # parameters_advanced_model = {"accumulate_grad_step": 10,
-    #                              "optimizer_method": "{'optim': optim.Adam, 'lr': 0.01, 'betas': (0.9,0.9)}",
-    #                              "lstm_hidden_dim": 0,
-    #                              "word_embedding_name_or_size_and_freeze_flag": "('fasttext.en.300d', False)",
-    #                              "tag_embedding_dim": 150,
-    #                              "mlp_hidden_dim": 100,
-    #                              "bilstm_layers": 5,
-    #                              "dropout_alpha": 0.3,
-    #                              "lstm_dropout": 0.3,
-    #                              "activation": "nn.ReLU",
-    #                              "min_freq": 1,
-    #                              'mlp_dropout': 0.15,
-    #                              'num_epochs': 5,
-    #                              'lower_case_flag': True,
-    #                              }
-    parameters_advanced_model = {"accumulate_grad_step": 10,
-                                 "optimizer_method": "{'optim': optim.AdamW, 'lr': 0.002, 'betas': (0.9,0.9)}",
+    parameters_advanced_model = {"accumulate_grad_step": 5,
+                                 "optimizer_method": "{'optim': optim.SGD, 'lr': 1.0}",
                                  "lstm_hidden_dim": 200,
-                                 "word_embedding_name_or_size_and_freeze_flag": "('glove.6B.100d', True)",
-                                 "tag_embedding_dim": 50,
-                                 "mlp_hidden_dim": 200,
-                                 "bilstm_layers": 4,
+                                 "word_embedding_name_or_size_and_freeze_flag": "('glove.6B.100d', False)",
+                                 "tag_embedding_dim": 25,
+                                 "mlp_hidden_dim": 500,
+                                 "bilstm_layers": 2,
                                  "dropout_alpha": 0.3,
-                                 "lstm_dropout": 0.3,
-                                 "activation": "nn.Tanh",
+                                 "lstm_dropout": 0.0,
+                                 "activation": "nn.ReLU",
                                  "min_freq": 3,
-                                 'mlp_dropout': 0,
-                                 'num_epochs': 1,
+                                 'mlp_dropout': 0.15,
+                                 'num_epochs': 200,
                                  'lower_case_flag': True,
                                  }
-
 
     if args.model_id == 1:
         params = parameters_basic_model
