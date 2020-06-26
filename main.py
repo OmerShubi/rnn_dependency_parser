@@ -1,14 +1,15 @@
 # Imports
 import datetime
-import torch.optim as optim
 from torch import load
 from torch.utils.data import DataLoader
 import logging.config
-from utils.DependencyParserModel import *
+from DependencyParserModel import *
 from utils.DataPreprocessing import *
 from utils.RunAndEvaluation import *
 from argparse import ArgumentParser
 import time
+import torch.optim as optim
+
 
 # uncomment for debugging
 # CUDA_LAUNCH_BLOCKING = 1 #

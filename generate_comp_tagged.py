@@ -1,4 +1,5 @@
 from torch.utils.data.dataloader import DataLoader
+import DependencyParserModel
 from utils.RunAndEvaluation import *
 from torch import load
 from utils.DataPreprocessing import *
@@ -23,7 +24,7 @@ def main():
 
         # load model
         model = load(model_path)
-
+        model.eval()
         # Get the dictionaries that the model trained on
         word_dict, tag_dict = model.word_dict, model.tag_dict
 
@@ -47,7 +48,6 @@ def main():
 def comp_infer(model, comp_dataloader):
     # Extract index sentences
     sentences = comp_dataloader.dataset.sentences_dataset
-
     for batch_idx, input_data in enumerate(tqdm.tqdm(comp_dataloader)):
         # Predict the tree structure
         predicted_tree_heads = model.infer(tuple(input_data), is_test=True, is_comp=True)
