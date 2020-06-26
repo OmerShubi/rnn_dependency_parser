@@ -3,6 +3,8 @@ from utils.DataPreprocessing import *
 from MLP import *
 from contextlib import nullcontext
 import random
+from torch import manual_seed
+manual_seed(0)
 
 
 class KiperwasserDependencyParser(nn.Module):

@@ -9,6 +9,8 @@ from utils.RunAndEvaluation import *
 from argparse import ArgumentParser
 import time
 import torch.optim as optim
+from torch import manual_seed
+manual_seed(0)
 
 # uncomment for debugging
 # CUDA_LAUNCH_BLOCKING = 1 #

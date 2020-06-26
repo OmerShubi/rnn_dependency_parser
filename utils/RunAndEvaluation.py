@@ -6,6 +6,8 @@ import numpy as np
 import seaborn as sns
 import torch
 import tqdm
+from torch import manual_seed
+manual_seed(0)
 
 matplotlib.use('Agg')
 

@@ -1,5 +1,7 @@
 from torch import device, cuda, add
 import torch.nn as nn
+from torch import manual_seed
+manual_seed(0)
 
 
 class MLP(nn.Module):

@@ -2,6 +2,8 @@ from torch.utils.data.dataset import Dataset
 from collections import Counter
 from torchtext.vocab import Vocab
 import torch
+from torch import manual_seed
+manual_seed(0)
 
 ROOT_WORD = ROOT_TAG = "<root>"
 UNKNOWN_TOKEN = UNKNOWN_TAG = "<unk>"
