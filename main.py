@@ -10,7 +10,6 @@ from argparse import ArgumentParser
 import time
 import torch.optim as optim
 
-
 # uncomment for debugging
 # CUDA_LAUNCH_BLOCKING = 1 #
 from utils.RunAndEvaluation import write_results
@@ -146,7 +145,6 @@ def optimization_wrapper(args, logger, path_train, path_test, params_dict):
             # Store the best model # TODO what is the best mode??
             if test_acc > max_test_acc:
                 max_test_acc = test_acc
-
                 # Save model
                 torch.save(model, f"models/model_{start_time_printable}_{args.model_id}.pth")
 
@@ -160,6 +158,8 @@ def optimization_wrapper(args, logger, path_train, path_test, params_dict):
             if epochs_no_improve == args.n_epochs_stop:
                 logger.debug(f'Early stopping after epoch {epoch} with max test acc of {max_test_acc}')
                 break
+
+            torch.save(model, f"models/model_{epoch}_{start_time_printable}_{test_acc}_{args.model_id}.pth")
 
         # Plot Accuracy
         create_graph(accuracy_train_list, accuracy_test_list, "Accuracy",
@@ -196,6 +196,7 @@ def main():
     parser.add_argument('--comp', action='store_true', default=False)
     parser.add_argument('--debug', action='store_true', default=False)
     parser.add_argument('--combined_train_data', action='store_true', default=False)
+    parser.add_argument('--do_cv', action='store_true', default=False)
     args = parser.parse_args()
 
     # Gets or creates a logger
@@ -213,6 +214,7 @@ def main():
 
     if args.combined_train_data:
         path_train = data_dir + "combined.labeled"
+        path_test = data_dir + "validation.labeled"
 
     logger.debug(f"Starting train: {path_train} test:{path_test}")
 
@@ -256,11 +258,24 @@ def main():
         print("model id must be 1 or 2")
         return
 
-    optimization_wrapper(args=args,
-                         logger=logger,
-                         path_train=path_train,
-                         path_test=path_test,
-                         params_dict=params)
+    if args.do_cv:
+        for i in range(10):
+            path_train = f"cv/combined{i}.labeled"
+            path_test = f"cv/val{i}.labeled"
+
+            logger.debug(f"Starting train: {path_train} test:{path_test}")
+            optimization_wrapper(args=args,
+                                 logger=logger,
+                                 path_train=path_train,
+                                 path_test=path_test,
+                                 params_dict=params)
+
+    else:
+        optimization_wrapper(args=args,
+                             logger=logger,
+                             path_train=path_train,
+                             path_test=path_test,
+                             params_dict=params)
 
 
 if __name__ == "__main__":

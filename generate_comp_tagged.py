@@ -3,7 +3,7 @@ import DependencyParserModel
 from utils.RunAndEvaluation import *
 from torch import load
 from utils.DataPreprocessing import *
-
+torch.manual_seed(0)
 
 def main():
     comp_path = "Data/comp.unlabeled"
@@ -15,26 +15,26 @@ def main():
     path_model2 = "models/model2.pth"
     models_paths = [path_model1, path_model2]
 
-    for model_path in models_paths:
+    for index, model_path in enumerate(models_paths):
 
         model_id = model_path.split(".")[0][-1]
         lower_case = False if model_id == 1 else True  # TODO finalize according to model 2
 
-        comp_tagged_path = f"comp_m{model_id}_206348187.labeled"
+        comp_tagged_path = "comp_m{model_id}_206348187.labeled" # TODO finalize
 
         # load model
         model = load(model_path)
         # Get the dictionaries that the model trained on
-        word_dict, tag_dict = model.word_dict, model.tag_dict
 
         # Preprocess the competition file
-        comp = DepDataset(word_dict=word_dict,
-                          tag_dict=tag_dict,
+        comp = DepDataset(word_dict=model.word_dict,
+                          tag_dict=model.tag_dict,
                           file_path=comp_path,
                           word_embedding_name_or_size=model.word_embedding_dim,
                           min_freq=1,
                           lower_case=lower_case,
                           comp=True)
+
         comp_dataloader = DataLoader(comp, shuffle=False)
 
         # Infer the competition file
@@ -45,10 +45,13 @@ def main():
 
 
 def comp_infer(model, comp_dataloader):
+    torch.manual_seed(0)
+
     # Extract index sentences
     sentences = comp_dataloader.dataset.sentences_dataset
-    model.eval()
+
     with torch.no_grad():
+        model.eval()
         for batch_idx, input_data in enumerate(tqdm.tqdm(comp_dataloader)):
             # Predict the tree structure
             predicted_tree_heads = model(tuple(input_data), is_test=True, is_comp=True)
