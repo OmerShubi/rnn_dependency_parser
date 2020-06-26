@@ -47,22 +47,14 @@ class KiperwasserDependencyParser(nn.Module):
 
         self.decoder = decode_mst  # This is used to produce the maximum spannning tree during inference
 
-        self.log_soft_max = nn.LogSoftmax(dim=0)
+        self.criterion = nn.CrossEntropyLoss(ignore_index=-1)
 
-        self.loss = nn.CrossEntropyLoss(ignore_index=-1)
-
-    def forward(self, sentence):
-        loss, predicted_tree = self.infer(sentence)
-
-        return loss, predicted_tree
-
-    def infer(self, sentence, is_test=False, is_comp=False):
-        cm = torch.no_grad() if is_comp else nullcontext()
-
+    def forward(self, sentence, is_test=False, is_comp=False):
+        cm = torch.no_grad() if (is_test or is_comp) else nullcontext()
         with cm:
             word_idx_tensor, tag_idx_tensor, true_tree_heads = sentence
 
-            if self.dropout and not is_test:
+            if self.dropout and not (is_test or is_comp):
                 for i, word in enumerate(word_idx_tensor[0]):
                     actual_word_idx = word.item()
                     if actual_word_idx != self.unknown_word_idx and actual_word_idx != self.root_idx:
@@ -92,20 +84,8 @@ class KiperwasserDependencyParser(nn.Module):
             if not is_comp:
                 true_tree_heads = true_tree_heads.squeeze(0)
                 # Calculate the negative log likelihood loss described above
-                # probs_logged = self.log_soft_max(scores)
-                # loss = KiperwasserDependencyParser.nll_loss(probs_logged, true_tree_heads, self.device)
-                loss = self.loss(torch.transpose(scores, 0, 1), true_tree_heads.to(self.device))
+                loss = self.criterion(torch.transpose(scores, 0, 1), true_tree_heads.to(self.device))
                 return loss, torch.from_numpy(predicted_tree_heads)
 
             else:
                 return torch.from_numpy(predicted_tree_heads)
-
-    @staticmethod
-    def nll_loss(probs_logged, tree, device):
-        loss = torch.tensor(0, dtype=torch.float).to(device)
-        tree_length = tree.size(0)
-        for m, h in enumerate(tree):
-            loss -= probs_logged[h, m]
-        return loss / tree_length
-
-

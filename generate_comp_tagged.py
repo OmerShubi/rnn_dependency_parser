@@ -24,7 +24,6 @@ def main():
 
         # load model
         model = load(model_path)
-        model.eval()
         # Get the dictionaries that the model trained on
         word_dict, tag_dict = model.word_dict, model.tag_dict
 
@@ -48,12 +47,14 @@ def main():
 def comp_infer(model, comp_dataloader):
     # Extract index sentences
     sentences = comp_dataloader.dataset.sentences_dataset
-    for batch_idx, input_data in enumerate(tqdm.tqdm(comp_dataloader)):
-        # Predict the tree structure
-        predicted_tree_heads = model.infer(tuple(input_data), is_test=True, is_comp=True)
+    model.eval()
+    with torch.no_grad():
+        for batch_idx, input_data in enumerate(tqdm.tqdm(comp_dataloader)):
+            # Predict the tree structure
+            predicted_tree_heads = model(tuple(input_data), is_test=True, is_comp=True)
 
-        # Bundle the word, tag and infered heads back together
-        sentences[batch_idx] = input_data[0], input_data[1], predicted_tree_heads
+            # Bundle the word, tag and infered heads back together
+            sentences[batch_idx] = input_data[0], input_data[1], predicted_tree_heads
     return sentences
 
 
@@ -71,14 +72,14 @@ def comp_writer(sentences, file_path, original_file_path):
                 original_sentence = originial_data[num_lines].split("\t")
 
                 # rebuild the line with the predicted head
-                f.write(get_line(i, original_sentence[1], original_sentence[3], heads[i]))
+                f.write(get_line(i, original_sentence[1], original_sentence[3], heads[i], original_sentence[7]))
                 num_lines += 1
             f.write("\n")
             num_lines += 1
 
 
-def get_line(num, word, pos, head):
-    return f"{num}\t{word}\t_\t{pos}\t_\t_\t{head}\t_\t_\t_\n"
+def get_line(num, word, pos, head, arc_tag):
+    return f"{num}\t{word}\t_\t{pos}\t_\t_\t{head}\t{arc_tag}\t_\t_\n"
 
 
 if __name__ == '__main__':

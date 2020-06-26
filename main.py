@@ -97,9 +97,8 @@ def optimization_wrapper(args, logger, path_train, path_test, params_dict):
         # Evaluate on test
         test_acc, test_loss = run_and_evaluate(model,
                                                test_dataloader,
-                                               is_test=True,
-                                               accumulate_grad_steps=args.acumelate_grad_steps)
-        logger.debug("test acc, test loss:", test_acc, test_loss)
+                                               is_test=True)
+        logger.debug(f"test acc {test_acc}, test loss: {test_loss}")
 
         return test_acc
 
@@ -130,6 +129,7 @@ def optimization_wrapper(args, logger, path_train, path_test, params_dict):
             test_acc, test_loss = run_and_evaluate(model,
                                                    test_dataloader,
                                                    is_test=True)
+
             if epoch == 1:
                 logger.debug(f"tagging test took {round(time.time() - start_time_test, 2)} seconds")
 
@@ -232,21 +232,37 @@ def main():
                               'lower_case_flag': False,
                               }
 
+    # parameters_advanced_model = {"accumulate_grad_step": 10,
+    #                              "optimizer_method": "{'optim': optim.Adam, 'lr': 0.01, 'betas': (0.9,0.9)}",
+    #                              "lstm_hidden_dim": 0,
+    #                              "word_embedding_name_or_size_and_freeze_flag": "('fasttext.en.300d', False)",
+    #                              "tag_embedding_dim": 150,
+    #                              "mlp_hidden_dim": 100,
+    #                              "bilstm_layers": 5,
+    #                              "dropout_alpha": 0.3,
+    #                              "lstm_dropout": 0.3,
+    #                              "activation": "nn.ReLU",
+    #                              "min_freq": 1,
+    #                              'mlp_dropout': 0.15,
+    #                              'num_epochs': 5,
+    #                              'lower_case_flag': True,
+    #                              }
     parameters_advanced_model = {"accumulate_grad_step": 10,
-                                 "optimizer_method": "{'optim': optim.Adam, 'lr': 0.01, 'betas': (0.9,0.9)}",
-                                 "lstm_hidden_dim": 0,
-                                 "word_embedding_name_or_size_and_freeze_flag": "('fasttext.en.300d', False)",
-                                 "tag_embedding_dim": 150,
-                                 "mlp_hidden_dim": 100,
-                                 "bilstm_layers": 5,
+                                 "optimizer_method": "{'optim': optim.AdamW, 'lr': 0.002, 'betas': (0.9,0.9)}",
+                                 "lstm_hidden_dim": 200,
+                                 "word_embedding_name_or_size_and_freeze_flag": "('glove.6B.100d', True)",
+                                 "tag_embedding_dim": 50,
+                                 "mlp_hidden_dim": 200,
+                                 "bilstm_layers": 4,
                                  "dropout_alpha": 0.3,
                                  "lstm_dropout": 0.3,
-                                 "activation": "nn.ReLU",
-                                 "min_freq": 1,
-                                 'mlp_dropout': 0.15,
-                                 'num_epochs': 5,
+                                 "activation": "nn.Tanh",
+                                 "min_freq": 3,
+                                 'mlp_dropout': 0,
+                                 'num_epochs': 1,
                                  'lower_case_flag': True,
                                  }
+
 
     if args.model_id == 1:
         params = parameters_basic_model

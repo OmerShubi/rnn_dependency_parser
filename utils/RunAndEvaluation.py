@@ -20,9 +20,8 @@ def run_and_evaluate(model, dataloader, accumulate_grad_steps=None, optimizer=No
     else:
         model.train()
     with cm:
-
         for batch_idx, input_data in enumerate(tqdm.tqdm(dataloader)):
-            loss, predicted_tree_heads = model.infer(tuple(input_data), is_test=is_test)
+            loss, predicted_tree_heads = model(tuple(input_data), is_test=is_test)
             if not is_test:
                 i += 1
                 loss = loss / accumulate_grad_steps
