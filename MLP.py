@@ -14,10 +14,7 @@ class MLP(nn.Module):
         self.activation = eval(activation)()
         self.device = device("cuda:0" if cuda.is_available() else "cpu")
 
-
     def forward(self, vectors):
-
-
         # X1 = W_half1*vh, X2 = W_half2*vm
         MLP_rep_m = self.layer_1_m(vectors).to(self.device)
         MLP_rep_h = self.layer_1_h(vectors).to(self.device)

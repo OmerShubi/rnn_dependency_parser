@@ -15,24 +15,17 @@ def main():
     path_model2 = "models/model2.pth"
     models_paths = [path_model1, path_model2]
 
-    """
-    train = DepDataset(word_dict=word_dict,
-                       tag_dict=tag_dict,
-                       file_path=path_train,
-                       word_embedding_name_or_size=word_embedding_name_or_size,
-                       comp=args.comp,
-                       min_freq=params_dict["min_freq"],
-                       lower_case=lower_case)"""
-
     for model_path in models_paths:
+
         model_id = model_path.split(".")[0][-1]
-        comp_tagged_path = f"comp_m{model_id}_206348187.labeled"  # TODO change name by req
+        lower_case = False if model_id == 1 else True  # TODO finalize according to model 2
+
+        comp_tagged_path = f"comp_m{model_id}_206348187.labeled"
 
         # load model
         model = load(model_path)
-
         # Get the dictionaries that the model trained on
-        word_dict, tag_dict = model.word_dict, model.tag_dict  # TODO maybe use word_to_index_dict
+        word_dict, tag_dict = model.word_dict, model.tag_dict
 
         # Preprocess the competition file
         comp = DepDataset(word_dict=word_dict,
@@ -40,7 +33,7 @@ def main():
                           file_path=comp_path,
                           word_embedding_name_or_size=model.word_embedding_dim,
                           min_freq=1,
-                          lower_case=True,  # TODO
+                          lower_case=lower_case,
                           comp=True)
         comp_dataloader = DataLoader(comp, shuffle=False)
 
@@ -54,13 +47,14 @@ def main():
 def comp_infer(model, comp_dataloader):
     # Extract index sentences
     sentences = comp_dataloader.dataset.sentences_dataset
+    model.eval()
+    with torch.no_grad():
+        for batch_idx, input_data in enumerate(tqdm.tqdm(comp_dataloader)):
+            # Predict the tree structure
+            predicted_tree_heads = model(tuple(input_data), is_test=True, is_comp=True)
 
-    for batch_idx, input_data in enumerate(tqdm.tqdm(comp_dataloader)):
-        # Predict the tree structure
-        predicted_tree_heads = model.infer(tuple(input_data), is_test=True, is_comp=True)
-
-        # Bundle the word, tag and infered heads back together
-        sentences[batch_idx] = input_data[0], input_data[1], predicted_tree_heads
+            # Bundle the word, tag and infered heads back together
+            sentences[batch_idx] = input_data[0], input_data[1], predicted_tree_heads
     return sentences
 
 
@@ -78,14 +72,14 @@ def comp_writer(sentences, file_path, original_file_path):
                 original_sentence = originial_data[num_lines].split("\t")
 
                 # rebuild the line with the predicted head
-                f.write(get_line(i, original_sentence[1], original_sentence[3], heads[i]))
+                f.write(get_line(i, original_sentence[1], original_sentence[3], heads[i], original_sentence[7]))
                 num_lines += 1
             f.write("\n")
             num_lines += 1
 
 
-def get_line(num, word, pos, head):
-    return f"{num}\t{word}\t_\t{pos}\t_\t_\t{head}\t_\t_\t_\n"
+def get_line(num, word, pos, head, arc_tag):
+    return f"{num}\t{word}\t_\t{pos}\t_\t_\t{head}\t{arc_tag}\t_\t_\n"
 
 
 if __name__ == '__main__':
